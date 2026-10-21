@@ -76,7 +76,7 @@ export default function App() {
       {!playing && (
         <aside className="side">
           <a className="brand" href="#/">
-            <span className="logo">⚡</span>
+            <img className="logo-img" src="./logo.svg" alt="" width="40" height="40" />
             <span>
               <b>QuizForge</b>
               <small>Mọi giáo trình → trắc nghiệm</small>

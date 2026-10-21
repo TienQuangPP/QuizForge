@@ -43,3 +43,6 @@ textarea.mono { font-family: ui-monospace, Consolas, monospace; font-size: 0.88r
   .note h2 { font-size: 1.25rem; }
   .note-foot .btn { flex: 1 1 100%; }
 }
+.logo-img { width: 40px; height: 40px; border-radius: 11px; box-shadow: 0 4px 14px rgba(91, 91, 240, 0.35); }
+.studio > .card:first-child > * { flex-shrink: 0; }
+.chart { justify-content: center; } .chart .col { max-width: 64px; }

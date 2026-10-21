@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f1226"/>
+      <stop offset="0.55" stop-color="#1b1745"/>
+      <stop offset="1" stop-color="#2a1250"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6366f1" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#6366f1" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ec4899" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ec4899" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow3" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f59e0b" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#c7d2fe"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="hot" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#ef4444"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.3" fill="#ffffff" opacity="0.07"/>
+    </pattern>
+  </defs>
+
+  <!-- background -->
+  <rect width="1280" height="640" fill="url(#sky)"/>
+  <rect width="1280" height="640" fill="url(#dots)"/>
+  <circle cx="1010" cy="170" r="330" fill="url(#glow1)"/>
+  <circle cx="1180" cy="560" r="280" fill="url(#glow2)"/>
+  <circle cx="150" cy="620" r="260" fill="url(#glow3)"/>
+
+  <!-- logo -->
+  <g transform="translate(80 92)">
+    <rect width="84" height="84" rx="22" fill="url(#brand)"/>
+    <rect x="19" y="16" width="40" height="50" rx="7" fill="#fff"/>
+    <rect x="26" y="24" width="22" height="4" rx="2" fill="#c7d2fe"/>
+    <circle cx="29" cy="37" r="3" fill="#e0e7ff"/><rect x="35" y="35" width="18" height="4" rx="2" fill="#e0e7ff"/>
+    <circle cx="29" cy="47" r="3" fill="#22c55e"/><rect x="35" y="45" width="18" height="4" rx="2" fill="#bbf7d0"/>
+    <circle cx="29" cy="57" r="3" fill="#e0e7ff"/><rect x="35" y="55" width="14" height="4" rx="2" fill="#e0e7ff"/>
+    <path d="M64 38 L51 58 H60 L55 74 L71 51 H62 Z" fill="url(#bolt)"/>
+  </g>
+  <text x="184" y="150" font-size="58" font-weight="800" fill="url(#title)" letter-spacing="-1.5">QuizForge</text>
+
+  <!-- headline -->
+  <text x="80" y="262" font-size="50" font-weight="800" fill="#ffffff" letter-spacing="-1">Biến mọi giáo trình</text>
+  <text x="80" y="324" font-size="50" font-weight="800" fill="#ffffff" letter-spacing="-1">thành <tspan fill="#fbbf24">trắc nghiệm</tspan> với AI</text>
+  <text x="80" y="374" font-size="22" fill="#c4c8e8">PDF · Word · PowerPoint · ảnh chụp đề  →  câu hỏi có đáp án,</text>
+  <text x="80" y="404" font-size="22" fill="#c4c8e8">lời giải, sổ tay lý thuyết và lịch ôn thông minh.</text>
+
+  <!-- feature pills -->
+  <g font-size="19" font-weight="600" fill="#ffffff">
+    <rect x="80" y="446" width="172" height="44" rx="22" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.18"/>
+    <text x="100" y="475">✨ AI tạo đề</text>
+    <rect x="264" y="446" width="196" height="44" rx="22" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.18"/>
+    <text x="284" y="475">📖 Sổ tay lý thuyết</text>
+    <rect x="472" y="446" width="150" height="44" rx="22" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.18"/>
+    <text x="492" y="475">🎮 5 chế độ</text>
+    <rect x="80" y="502" width="178" height="44" rx="22" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.18"/>
+    <text x="100" y="531">🤖 Gia sư AI</text>
+    <rect x="270" y="502" width="190" height="44" rx="22" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.18"/>
+    <text x="290" y="531">🏆 XP &amp; huy hiệu</text>
+    <rect x="472" y="502" width="150" height="44" rx="22" fill="#ffffff" fill-opacity="0.1" stroke="#ffffff" stroke-opacity="0.18"/>
+    <text x="492" y="531">🔒 Offline</text>
+  </g>
+  <text x="80" y="592" font-size="17" fill="#8f94c0">Hỗ trợ ChatGPT · Gemini · OpenRouter · Ollama   —   Chạy portable trên Windows, không cần cài đặt</text>
+
+  <!-- floating documents -->
+  <g transform="translate(700 380) rotate(-12)" filter="url(#shadow)">
+    <rect width="96" height="120" rx="12" fill="#ef4444"/>
+    <rect x="14" y="18" width="52" height="8" rx="4" fill="#fff" opacity="0.9"/>
+    <rect x="14" y="34" width="68" height="6" rx="3" fill="#fff" opacity="0.5"/>
+    <rect x="14" y="46" width="60" height="6" rx="3" fill="#fff" opacity="0.5"/>
+    <text x="48" y="100" font-size="24" font-weight="800" fill="#fff" text-anchor="middle">PDF</text>
+  </g>
+  <g transform="translate(690 175) rotate(10)" filter="url(#shadow)">
+    <rect width="84" height="104" rx="12" fill="#f97316"/>
+    <rect x="12" y="16" width="46" height="7" rx="3.5" fill="#fff" opacity="0.9"/>
+    <rect x="12" y="30" width="58" height="5" rx="2.5" fill="#fff" opacity="0.5"/>
+    <text x="42" y="88" font-size="20" font-weight="800" fill="#fff" text-anchor="middle">PPT</text>
+  </g>
+
+  <!-- quiz card mockup -->
+  <g transform="translate(800 92)" filter="url(#shadow)">
+    <rect width="400" height="456" rx="28" fill="#171b2e" stroke="#ffffff" stroke-opacity="0.1"/>
+    <!-- top bar -->
+    <rect x="24" y="24" width="352" height="8" rx="4" fill="#2a3050"/>
+    <rect x="24" y="24" width="236" height="8" rx="4" fill="url(#brand)"/>
+    <text x="24" y="66" font-size="15" fill="#9aa0bd">🧠 Sinh học · Câu 7/10</text>
+    <g transform="translate(250 46)">
+      <rect width="126" height="30" rx="15" fill="url(#hot)"/>
+      <text x="63" y="20.5" font-size="15" font-weight="800" fill="#fff" text-anchor="middle">🔥 Combo x5</text>
+    </g>
+    <text x="24" y="110" font-size="21" font-weight="700" fill="#e8eaf5">Quang hợp chuyển hoá</text>
+    <text x="24" y="138" font-size="21" font-weight="700" fill="#e8eaf5">năng lượng ánh sáng thành…</text>
+    <!-- choices -->
+    <g font-size="17" fill="#e8eaf5">
+      <rect x="24" y="164" width="352" height="52" rx="14" fill="#1f2439" stroke="#2a3050" stroke-width="2"/>
+      <rect x="38" y="176" width="28" height="28" rx="8" fill="#2a3050"/><text x="52" y="196" text-anchor="middle" font-weight="700">A</text>
+      <text x="80" y="196">Nhiệt năng</text>
+      <rect x="24" y="226" width="352" height="52" rx="14" fill="#12352a" stroke="#34d399" stroke-width="2"/>
+      <rect x="38" y="238" width="28" height="28" rx="8" fill="#34d399"/><text x="52" y="258" text-anchor="middle" font-weight="700" fill="#0f1220">B</text>
+      <text x="80" y="258" font-weight="600">Hoá năng trong glucose</text>
+      <text x="350" y="259" font-weight="800" fill="#34d399">✓</text>
+      <rect x="24" y="288" width="352" height="52" rx="14" fill="#1f2439" stroke="#2a3050" stroke-width="2"/>
+      <rect x="38" y="300" width="28" height="28" rx="8" fill="#2a3050"/><text x="52" y="320" text-anchor="middle" font-weight="700">C</text>
+      <text x="80" y="320">Điện năng</text>
+    </g>
+    <!-- feedback -->
+    <rect x="24" y="356" width="352" height="74" rx="14" fill="#12352a"/>
+    <text x="40" y="384" font-size="17" font-weight="800" fill="#34d399">🎉 Chính xác!</text>
+    <text x="40" y="410" font-size="14" fill="#a7f3d0">📖 Ôn lý thuyết: Quang hợp   ·   🤖 AI giảng kỹ</text>
+  </g>
+
+  <!-- XP & level badges -->
+  <g transform="translate(1104 64)" filter="url(#shadow)">
+    <rect width="132" height="48" rx="24" fill="url(#gold)"/>
+    <text x="66" y="31" font-size="19" font-weight="800" fill="#7c2d12" text-anchor="middle">⭐ +15 XP</text>
+  </g>
+  <g transform="translate(724 486)" filter="url(#shadow)">
+    <rect width="190" height="62" rx="18" fill="#ffffff"/>
+    <rect x="12" y="11" width="40" height="40" rx="12" fill="url(#gold)"/>
+    <text x="32" y="38" font-size="20" text-anchor="middle">🎓</text>
+    <text x="64" y="30" font-size="15" font-weight="800" fill="#161a2b">Cấp 8 · Học giả</text>
+    <rect x="64" y="40" width="110" height="7" rx="3.5" fill="#e3e6ef"/>
+    <rect x="64" y="40" width="74" height="7" rx="3.5" fill="#6366f1"/>
+  </g>
+</svg>
