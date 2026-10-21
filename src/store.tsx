@@ -294,8 +294,9 @@ function useStoreValue() {
   }, []);
 
   const addNotes = useCallback(async (deckId: string, drafts: { title: string; summary?: string; content: string; source: TheoryNote["source"] }[]) => {
-    const base = Math.max(0, ...notes.filter((n) => n.deckId === deckId).map((n) => n.order + 1));
+    // Time-based order stays unique even when several batches are added before state refreshes.
     const now = Date.now();
+    const base = Math.max(now, ...notes.filter((n) => n.deckId === deckId).map((n) => n.order + 1));
     const items: TheoryNote[] = drafts.map((d, i) => ({ ...d, id: uid(), deckId, order: base + i, createdAt: now, updatedAt: now }));
     await saveNotes(items);
     return items;

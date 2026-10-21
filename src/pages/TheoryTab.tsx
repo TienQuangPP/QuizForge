@@ -192,7 +192,9 @@ export default function TheoryTab({ deckId, noteId }: { deckId: string; noteId?:
   const move = async (dir: -1 | 1) => {
     const other = notes[idx + dir];
     if (!current || !other) return;
-    await store.saveNotes([{ ...current, order: other.order }, { ...other, order: current.order }]);
+    const list = [...notes];
+    [list[idx], list[idx + dir]] = [list[idx + dir], list[idx]];
+    await store.saveNotes(list.map((n, i) => ({ ...n, order: i })));
   };
 
   const listen = () => {

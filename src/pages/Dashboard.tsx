@@ -62,7 +62,15 @@ export default function Dashboard() {
   }, [progress, today.answered]);
   const goalPct = Math.min(1, todayCount / Math.max(1, settings.dailyGoal));
   const ai = aiReady(settings);
-  const [saved, setSaved] = useState(loadSavedRun);
+  const [saved, setSaved] = useState(() => {
+    const s = loadSavedRun();
+    // A paused quiz whose questions were all deleted can't be resumed.
+    if (s && !s.run.items.some((it) => questions.some((q) => q.id === it.id))) {
+      discardSavedRun();
+      return null;
+    }
+    return s;
+  });
   const dailyDone = game.dailyDone === dayKey(Date.now());
   const lastBackup = +(localStorage.getItem("quizforge-last-backup") || 0);
   const needBackup = questions.length >= 20 && Date.now() - lastBackup > 14 * DAY;

@@ -54,3 +54,6 @@ textarea.mono { font-family: ui-monospace, Consolas, monospace; font-size: 0.88r
 .prompt-view { max-height: 280px; font-size: 0.78rem; }
 .seg.wrap button:disabled { opacity: 0.45; cursor: not-allowed; }
 .ext .draft input:not([type]) { font-weight: 600; }
+/* long button labels wrap instead of overflowing narrow screens */
+.btn { max-width: 100%; }
+.empty .btn, .row.wrap .btn, .start-grid .btn { white-space: normal; text-align: center; }

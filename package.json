@@ -1,13 +1,15 @@
 {
   "name": "quizforge",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "portable": "npm run build && node scripts/make-portable.mjs"
+    "portable": "npm run build && node scripts/make-portable.mjs",
+    "test:parser": "node --experimental-strip-types --no-warnings tests/parser.test.mts",
+    "test:e2e": "node tests/e2e.mjs"
   },
   "dependencies": {
     "jszip": "^3.10.2",

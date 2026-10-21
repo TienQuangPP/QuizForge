@@ -422,7 +422,7 @@ export default function DeckPage({ id, tab = "questions", sub }: { id?: string; 
       </div>
 
       <div className="action-grid">
-        <button className="action" disabled={!qs.length} onClick={() => go(`practice/${deck.id}`)}><span>🎯</span>Luyện tập<small>Phản hồi ngay từng câu</small></button>
+        <button className="action" disabled={!qs.length} onClick={() => go(`practice/${deck.id}/practice`)}><span>🎯</span>Luyện tập<small>Phản hồi ngay từng câu</small></button>
         <button className="action" disabled={!qs.length} onClick={() => go(`practice/${deck.id}/exam`)}><span>📝</span>Thi thử<small>Bấm giờ, chấm cuối bài</small></button>
         <button className="action" disabled={!qs.length} onClick={() => go(`practice/${deck.id}/flash`)}><span>🃏</span>Thẻ ghi nhớ<small>Lặp lại ngắt quãng</small></button>
         <button className="action" disabled={!st.wrong} onClick={() => go(`practice/${deck.id}/wrong`)}><span>🩹</span>Ôn câu sai<small>{st.wrong} câu</small></button>

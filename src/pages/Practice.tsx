@@ -94,7 +94,7 @@ export function PracticeSetup({ deckId, preset }: { deckId?: string; preset?: st
   const store = useStore();
   const saved = JSON.parse(localStorage.getItem(CFG_KEY) || "{}");
   const initialDecks = deckId && deckId !== "all" ? [deckId] : store.decks.map((d) => d.id);
-  const presetMode = (["exam", "flash", "speed", "survival"] as PracticeMode[]).find((m) => m === preset);
+  const presetMode = (["practice", "exam", "flash", "speed", "survival"] as PracticeMode[]).find((m) => m === preset);
   const [decks, setDecks] = useState<Set<string>>(new Set(initialDecks));
   const [mode, setMode] = useState<PracticeMode>(presetMode ?? saved.mode ?? "practice");
   const [source, setSource] = useState<Source>(preset === "wrong" ? "wrong" : preset === "due" ? "due" : saved.source ?? "smart");
@@ -386,6 +386,10 @@ export function Player() {
 
   const qmap = useMemo(() => new Map(store.questions.map((q) => [q.id, q])), [store.questions]);
   const items = useMemo(() => (run?.items ?? []).filter((it) => qmap.has(it.id)), [run, qmap]);
+  useEffect(() => {
+    if (run && !items.length) localStorage.removeItem(RUN_KEY);
+    else if (idx >= items.length && items.length) setIdx(items.length - 1);
+  }, [items.length]); // eslint-disable-line
   const elapsed = Math.floor((now - startAt) / 1000);
   const remaining = run?.timeLimitSec ? run.timeLimitSec - elapsed : 0;
   const instant = run ? run.mode !== "exam" && run.mode !== "flash" : false; // check on answer
@@ -393,7 +397,7 @@ export function Player() {
 
   // Persist progress so a refresh or accidental close can resume.
   useEffect(() => {
-    if (!run || finished) return;
+    if (!run || finished || recorded.current) return;
     const state: RunState = { run, idx, answers, checked, flashRes, elapsed, combo, bestCombo, lives, xp };
     try { localStorage.setItem(RUN_KEY, JSON.stringify(state)); } catch { /* storage full */ }
   }, [run, idx, answers, checked, flashRes, elapsed, combo, bestCombo, lives, xp, finished]);
@@ -480,6 +484,11 @@ export function Player() {
       setFlipped(false);
     } else finish();
   }, [idx, items.length, finish]);
+  // Auto-advance timers fire after state updates, so they go through refs to the latest callbacks.
+  const finishRef = useRef(finish);
+  const nextRef = useRef(next);
+  finishRef.current = finish;
+  nextRef.current = next;
 
   const check = (ans = answers[idx]) => {
     if (!run || !ans?.length || checked[idx]) return;
@@ -503,7 +512,7 @@ export function Player() {
       setLives((l) => l - 1);
     }
     if (auto) {
-      advanceTimer.current = window.setTimeout(() => (dead ? finish() : next()), ok ? 650 : 1400);
+      advanceTimer.current = window.setTimeout(() => (dead ? finishRef.current() : nextRef.current()), ok ? 650 : 1400);
     }
   };
 
@@ -541,6 +550,7 @@ export function Player() {
     if (!run || finished || !item || editing) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName?.match(/INPUT|TEXTAREA|SELECT/)) return;
+      if (document.querySelector(".modal-bg")) return;
       const k = e.key.toLowerCase();
       if (k === "r") return readQuestion(cur!.q, cur!.order);
       if (k === "f") return void store.toggleFlag(item.id);
@@ -554,8 +564,11 @@ export function Player() {
       else if (k === "enter") {
         e.preventDefault();
         if (instant) checked[idx] ? next() : check();
+        else if (run.mode === "exam" && idx === items.length - 1) submitExam();
         else next();
-      } else if (k === "arrowright" && (run.mode === "exam" || checked[idx])) next();
+      } else if (k === "arrowright" && run.mode === "exam") {
+        if (idx < items.length - 1) next();
+      } else if (k === "arrowright" && checked[idx]) next();
       else if (k === "arrowleft" && idx > 0 && !auto) setIdx(idx - 1);
     };
     addEventListener("keydown", onKey);
@@ -574,7 +587,8 @@ export function Player() {
 
   if (finished) return <Results run={run} items={items} view={view} answers={answers} checked={checked} flashRes={flashRes} isCorrect={isCorrect} elapsed={elapsed} xp={xp} bestCombo={bestCombo} prevBest={prevBest} />;
 
-  const { q, order, correct: cd } = cur!;
+  if (!cur) return null;
+  const { q, order, correct: cd } = cur;
   const deck = store.decks.find((d) => d.id === q.deckId);
   const p = store.progress[q.id];
   const answeredCount = run.mode === "flash" ? Object.keys(flashRes).length : run.mode === "exam" ? Object.values(answers).filter((a) => a.length).length : Object.keys(checked).length;
@@ -588,7 +602,7 @@ export function Player() {
     <div className={"player mode-" + run.mode}>
       <div className="player-top">
         <button className="btn ghost sm" onClick={() => {
-          if (!answeredCount) { localStorage.removeItem(RUN_KEY); return history.back(); }
+          if (!answeredCount) { localStorage.removeItem(RUN_KEY); return run.deckIds.length === 1 ? go("deck/" + run.deckIds[0]) : go("practice"); }
           if (confirm("Kết thúc bài ngay bây giờ?\n\nOK = chấm điểm các câu đã làm\nCancel = tiếp tục làm")) finish();
         }}>✕ {answeredCount ? "Kết thúc" : "Thoát"}</button>
         <div className="grow center">

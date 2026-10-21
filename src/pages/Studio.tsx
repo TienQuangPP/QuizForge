@@ -158,8 +158,10 @@ export default function Studio({ deckId, docId }: { deckId?: string; docId?: str
   };
 
   const save = async () => {
-    const id = await ensureDeck();
     const chosen = drafts.filter((_, i) => picked.has(i));
+    const missing = chosen.filter((q) => !q.answers.length).length;
+    if (missing && !confirm(`${missing} câu chưa có đáp án (sẽ tạm đặt là A). Nên bấm ✎ để chọn đáp án trước. Vẫn lưu?`)) return;
+    const id = await ensureDeck();
     const n = await store.addQuestions(id, chosen);
     if (n) store.patchGame((g) => ({ ...g, aiGenerated: g.aiGenerated + n }));
     store.toast(`Đã lưu ${n} câu vào bộ đề${chosen.length - n ? ` (bỏ ${chosen.length - n} câu trùng)` : ""}`);

@@ -156,7 +156,7 @@ function normalizeDrafts(raw: any, source?: string): DraftQuestion[] {
       return {
         question: String(q.question).trim(),
         options,
-        answers: answers.length ? answers : [0],
+        answers,
         explanation: q.explanation ? String(q.explanation).trim() : undefined,
         topic: q.topic ? String(q.topic).trim() : undefined,
         difficulty: (["easy", "medium", "hard"].includes(d) ? d : undefined) as Difficulty | undefined,

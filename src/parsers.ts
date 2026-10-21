@@ -440,7 +440,7 @@ export async function fileToQuestions(file: File): Promise<DraftQuestion[]> {
   if (e === "json") return jsonToQuestions(JSON.parse(await file.text()));
   if (e === "csv" || e === "tsv") return rowsToQuestions(parseCSV(await file.text()));
   if (e === "xlsx") return rowsToQuestions(await xlsxRows(await file.arrayBuffer()));
-  return parseQuestionText(await extractText(file));
+  return parsePasted(await extractText(file));
 }
 
 export function download(name: string, content: string, type = "application/json") {
