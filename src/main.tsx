@@ -4,6 +4,7 @@ import App from "./App";
 import { StoreProvider } from "./store";
 import "./styles.css";
 import "./styles-v11.css";
+import "./styles-theory.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

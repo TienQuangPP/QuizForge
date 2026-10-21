@@ -23,7 +23,23 @@ export interface Question {
   difficulty?: Difficulty;
   source?: string;
   image?: string;
+  /** Cached "AI explain" answer so it doesn't need to be requested again. */
+  aiExplain?: string;
   createdAt: number;
+}
+
+/** A theory note (one topic) in a deck's study handbook. Content is Markdown. */
+export interface TheoryNote {
+  id: string;
+  deckId: string;
+  title: string;
+  summary?: string;
+  content: string;
+  order: number;
+  source: "ai" | "manual";
+  readAt?: number;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface SourceDoc {

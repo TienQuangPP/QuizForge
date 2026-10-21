@@ -5,6 +5,7 @@ import { blankQuestion, confirmBox, DiffBadge, Empty, go, Modal, Progress, Quest
 import { DOC_ACCEPT, download, extractText, isImage, letter, questionsToCSV, questionsToText } from "../parsers";
 import { DeckForm } from "./Library";
 import { formatInterval } from "../srs";
+import TheoryTab from "./TheoryTab";
 
 type Filter = "all" | "wrong" | "flagged" | "unseen" | "mastered" | "due";
 
@@ -371,7 +372,7 @@ function StatsTab({ deckId }: { deckId: string }) {
   );
 }
 
-export default function DeckPage({ id, tab = "questions" }: { id?: string; tab?: string }) {
+export default function DeckPage({ id, tab = "questions", sub }: { id?: string; tab?: string; sub?: string }) {
   const store = useStore();
   const deck = store.decks.find((d) => d.id === id);
   const [editing, setEditing] = useState(false);
@@ -390,6 +391,7 @@ export default function DeckPage({ id, tab = "questions" }: { id?: string; tab?:
 
   const tabs = [
     { id: "questions", label: `Câu hỏi (${qs.length})` },
+    { id: "theory", label: `📖 Lý thuyết (${store.notes.filter((n) => n.deckId === id).length})` },
     { id: "docs", label: `Tài liệu (${store.docs.filter((d) => d.deckId === id).length})` },
     { id: "stats", label: "Tiến độ" },
   ];
@@ -426,6 +428,7 @@ export default function DeckPage({ id, tab = "questions" }: { id?: string; tab?:
         <button className="action" disabled={!st.wrong} onClick={() => go(`practice/${deck.id}/wrong`)}><span>🩹</span>Ôn câu sai<small>{st.wrong} câu</small></button>
         <button className="action" onClick={() => go(`studio/${deck.id}`)}><span>✨</span>Tạo thêm bằng AI<small>Từ giáo trình</small></button>
         <button className="action" onClick={() => go(`import/${deck.id}`)}><span>📥</span>Nhập câu hỏi<small>File, văn bản, ảnh</small></button>
+        <button className="action" onClick={() => go(`deck/${deck.id}/theory`)}><span>📖</span>Học lý thuyết<small>Sổ tay theo chủ đề</small></button>
         <button className="action" onClick={() => go(`tutor/${deck.id}`)}><span>🤖</span>Gia sư AI<small>Hỏi về giáo trình</small></button>
       </div>
 
@@ -434,7 +437,7 @@ export default function DeckPage({ id, tab = "questions" }: { id?: string; tab?:
           <a key={t.id} href={`#/deck/${deck.id}/${t.id}`} className={tab === t.id ? "on" : ""}>{t.label}</a>
         ))}
       </div>
-      {tab === "docs" ? <DocsTab deckId={deck.id} /> : tab === "stats" ? <StatsTab deckId={deck.id} /> : <QuestionsTab deckId={deck.id} />}
+      {tab === "theory" ? <TheoryTab deckId={deck.id} noteId={sub} /> : tab === "docs" ? <DocsTab deckId={deck.id} /> : tab === "stats" ? <StatsTab deckId={deck.id} /> : <QuestionsTab deckId={deck.id} />}
 
       {editing && <DeckForm deck={deck} onClose={() => setEditing(false)} />}
       {exportOpen && (

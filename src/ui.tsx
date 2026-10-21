@@ -73,8 +73,8 @@ export function Stat({ label, value, sub, tone }: { label: string; value: ReactN
 const DIFF_LABEL: Record<Difficulty, string> = { easy: "Dễ", medium: "Vừa", hard: "Khó" };
 export const DiffBadge = ({ d }: { d?: Difficulty }) => (d ? <span className={"badge diff-" + d}>{DIFF_LABEL[d]}</span> : null);
 
-/** Tiny, safe Markdown renderer (headings, bold, italic, code, lists, tables-less). */
-export function Markdown({ text }: { text: string }) {
+/** Tiny, safe Markdown renderer (headings, bold, italic, code, lists, tables, quotes). */
+export function mdToHtml(text: string): string {
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const inline = (s: string) =>
     esc(s)
@@ -84,9 +84,17 @@ export function Markdown({ text }: { text: string }) {
   const html: string[] = [];
   let list: "ul" | "ol" | null = null;
   let code = false;
+  let table: string[][] | null = null;
+  const flushTable = () => {
+    if (!table) return;
+    const [head, ...rows] = table;
+    html.push(`<div class="md-table"><table><thead><tr>${head.map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+    table = null;
+  };
   const close = () => {
     if (list) html.push(`</${list}>`);
     list = null;
+    flushTable();
   };
   for (const raw of text.split("\n")) {
     if (raw.trim().startsWith("```")) {
@@ -98,7 +106,16 @@ export function Markdown({ text }: { text: string }) {
     if (code) { html.push(esc(raw) + "\n"); continue; }
     const line = raw.trimEnd();
     let m: RegExpMatchArray | null;
+    if (/^\s*\|.*\|\s*$/.test(line)) {
+      if (list) { html.push(`</${list}>`); list = null; }
+      const cells = line.trim().slice(1, -1).split("|").map((c) => c.trim());
+      if (cells.every((c) => /^:?-{2,}:?$/.test(c))) continue; // separator row
+      (table ??= []).push(cells);
+      continue;
+    }
+    flushTable();
     if ((m = line.match(/^(#{1,4})\s+(.*)/))) { close(); html.push(`<h${m[1].length + 2}>${inline(m[2])}</h${m[1].length + 2}>`); }
+    else if ((m = line.match(/^\s*>\s?(.*)/))) { close(); html.push(`<blockquote>${inline(m[1])}</blockquote>`); }
     else if ((m = line.match(/^\s*[-*•]\s+(.*)/))) { if (list !== "ul") { close(); html.push("<ul>"); list = "ul"; } html.push(`<li>${inline(m[1])}</li>`); }
     else if ((m = line.match(/^\s*\d+[.)]\s+(.*)/))) { if (list !== "ol") { close(); html.push("<ol>"); list = "ol"; } html.push(`<li>${inline(m[1])}</li>`); }
     else if (!line.trim()) close();
@@ -106,7 +123,11 @@ export function Markdown({ text }: { text: string }) {
   }
   close();
   if (code) html.push("</pre>");
-  return <div className="md" dangerouslySetInnerHTML={{ __html: html.join("") }} />;
+  return html.join("");
+}
+
+export function Markdown({ text, className }: { text: string; className?: string }) {
+  return <div className={"md" + (className ? " " + className : "")} dangerouslySetInnerHTML={{ __html: mdToHtml(text) }} />;
 }
 
 export function Spinner() {

@@ -52,7 +52,7 @@ export default function App() {
     switch (page ?? "") {
       case "": return <Dashboard />;
       case "library": return <Library />;
-      case "deck": return <DeckPage id={arg} tab={route[2]} />;
+      case "deck": return <DeckPage id={arg} tab={route[2]} sub={route[3]} />;
       case "studio": return <Studio deckId={arg} docId={route[2]} />;
       case "import": return <ImportPage deckId={arg} />;
       case "practice": return <PracticeSetup deckId={arg} preset={route[2]} />;

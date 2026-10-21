@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import * as db from "./db";
 import { uid } from "./db";
-import { DEFAULT_SETTINGS, type Deck, type DraftQuestion, type Progress, type Question, type Session, type Settings, type SourceDoc } from "./types";
+import { DEFAULT_SETTINGS, type TheoryNote, type Deck, type DraftQuestion, type Progress, type Question, type Session, type Settings, type SourceDoc } from "./types";
 import { grade } from "./srs";
 import { ACHIEVEMENTS, GAME_KEY, levelOf, levelTitle, loadGame, type GameCtx, type GameState } from "./game";
 import { confetti, setFxSettings, sound } from "./fx";
@@ -23,7 +23,7 @@ export const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
 export interface Toast { id: string; text: string; kind: "ok" | "err" | "info" | "win"; action?: { label: string; run: () => void } }
-export interface Snapshot { decks?: Deck[]; questions?: Question[]; docs?: SourceDoc[]; progress?: Progress[] }
+export interface Snapshot { decks?: Deck[]; questions?: Question[]; docs?: SourceDoc[]; progress?: Progress[]; notes?: TheoryNote[] }
 
 function useStoreValue() {
   const [ready, setReady] = useState(false);
@@ -32,18 +32,21 @@ function useStoreValue() {
   const [docs, setDocs] = useState<SourceDoc[]>([]);
   const [progress, setProgress] = useState<Record<string, Progress>>({});
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [notes, setNotes] = useState<TheoryNote[]>([]);
   const [settings, setSettingsState] = useState<Settings>(loadSettings);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [game, setGame] = useState<GameState>(loadGame);
 
   const reload = useCallback(async () => {
-    const [d, q, dc, p, s] = await Promise.all([
+    const [d, q, dc, p, s, n] = await Promise.all([
       db.getAll<Deck>("decks"),
       db.getAll<Question>("questions"),
       db.getAll<SourceDoc>("docs"),
       db.getAll<Progress>("progress"),
       db.getAll<Session>("sessions"),
+      db.getAll<TheoryNote>("notes"),
     ]);
+    setNotes(n.sort((a, b) => a.order - b.order));
     setDecks(d.sort((a, b) => b.updatedAt - a.updatedAt));
     setQuestions(q.sort((a, b) => a.createdAt - b.createdAt));
     setDocs(dc);
@@ -130,6 +133,8 @@ function useStoreValue() {
     await db.putMany("questions", snap.questions ?? []);
     await db.putMany("docs", snap.docs ?? []);
     await db.putMany("progress", snap.progress ?? []);
+    await db.putMany("notes", snap.notes ?? []);
+    if (snap.notes?.length) setNotes((x) => [...x, ...snap.notes!].sort((a, b) => a.order - b.order));
     if (snap.decks?.length) setDecks((d) => [...snap.decks!, ...d.filter((x) => !snap.decks!.some((y) => y.id === x.id))]);
     if (snap.questions?.length) setQuestions((q) => [...q, ...snap.questions!].sort((a, b) => a.createdAt - b.createdAt));
     if (snap.docs?.length) setDocs((d) => [...d, ...snap.docs!]);
@@ -185,7 +190,10 @@ function useStoreValue() {
         decks: decks.filter((d) => d.id === deckId),
         questions: questions.filter((q) => q.deckId === deckId),
         docs: docs.filter((d) => d.deckId === deckId),
+        notes: notes.filter((n) => n.deckId === deckId),
       };
+      await db.deleteMany("notes", snap.notes!.map((n) => n.id));
+      setNotes((x) => x.filter((n) => n.deckId !== deckId));
       const qids = snap.questions!.map((q) => q.id);
       const dids = snap.docs!.map((d) => d.id);
       snap.progress = qids.map((id) => progress[id]).filter(Boolean);
@@ -203,7 +211,7 @@ function useStoreValue() {
       });
       offerUndo(`Đã xoá bộ đề “${snap.decks![0]?.name ?? ""}”`, snap);
     },
-    [decks, questions, docs, progress, offerUndo],
+    [decks, questions, docs, progress, notes, offerUndo],
   );
 
   /** Adds questions, skipping exact duplicates already in the deck. Returns number added. */
@@ -276,6 +284,31 @@ function useStoreValue() {
     offerUndo(`Đã xoá tài liệu ${snap.docs![0]?.name ?? ""}`, snap);
   }, [docs, offerUndo]);
 
+  const saveNotes = useCallback(async (items: TheoryNote[]) => {
+    await db.putMany("notes", items);
+    setNotes((x) => {
+      const map = new Map(x.map((n) => [n.id, n]));
+      for (const n of items) map.set(n.id, n);
+      return [...map.values()].sort((a, b) => a.order - b.order);
+    });
+  }, []);
+
+  const addNotes = useCallback(async (deckId: string, drafts: { title: string; summary?: string; content: string; source: TheoryNote["source"] }[]) => {
+    const base = Math.max(0, ...notes.filter((n) => n.deckId === deckId).map((n) => n.order + 1));
+    const now = Date.now();
+    const items: TheoryNote[] = drafts.map((d, i) => ({ ...d, id: uid(), deckId, order: base + i, createdAt: now, updatedAt: now }));
+    await saveNotes(items);
+    return items;
+  }, [notes, saveNotes]);
+
+  const deleteNotes = useCallback(async (ids: string[]) => {
+    const set = new Set(ids);
+    const snap: Snapshot = { notes: notes.filter((n) => set.has(n.id)) };
+    await db.deleteMany("notes", ids);
+    setNotes((x) => x.filter((n) => !set.has(n.id)));
+    offerUndo(ids.length === 1 ? `Đã xoá chủ đề “${snap.notes![0]?.title ?? ""}”` : `Đã xoá ${ids.length} chủ đề lý thuyết`, snap);
+  }, [notes, offerUndo]);
+
   const recordAnswer = useCallback(
     async (qid: string, correct: boolean, quality?: number) => {
       const next = grade(progress[qid], qid, correct, quality);
@@ -320,9 +353,10 @@ function useStoreValue() {
       docs,
       progress: Object.values(progress),
       sessions,
+      notes,
       game,
     }),
-    [decks, questions, docs, progress, sessions, game],
+    [decks, questions, docs, progress, sessions, notes, game],
   );
 
   const importBackup = useCallback(
@@ -333,6 +367,7 @@ function useStoreValue() {
       await db.putMany("docs", data.docs ?? []);
       await db.putMany("progress", data.progress ?? []);
       await db.putMany("sessions", data.sessions ?? []);
+      await db.putMany("notes", data.notes ?? []);
       if (data.game) patchGame((g) => (replace ? { ...g, ...data.game } : { ...g, xp: Math.max(g.xp, data.game.xp ?? 0), unlocked: { ...data.game.unlocked, ...g.unlocked } }));
       await reload();
     },
@@ -345,7 +380,7 @@ function useStoreValue() {
   }, [reload]);
 
   return {
-    ready, decks, questions, docs, progress, sessions, settings, toasts, game,
+    ready, decks, questions, docs, progress, sessions, notes, settings, toasts, game, saveNotes, addNotes, deleteNotes,
     toast, dismissToast, setSettings, addXp, unlock, patchGame, checkAchievements, restore, createDeck, updateDeck, deleteDeck, addQuestions, updateQuestion,
     deleteQuestions, moveQuestions, addDoc, deleteDoc, recordAnswer, toggleFlag, resetProgress,
     addSession, exportAll, importBackup, wipe,

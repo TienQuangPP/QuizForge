@@ -7,6 +7,8 @@ import { DiffBadge, Empty, fmtDuration, go, Markdown, Modal, QuestionForm, shuff
 import { formatInterval, grade } from "../srs";
 import { canSpeak, confetti, sound, speak, stopSpeaking } from "../fx";
 import { dayKey } from "./Dashboard";
+import { NoteModal } from "./TheoryTab";
+import { noteForQuestion } from "../theory";
 
 interface RunItem { id: string; order: number[] }
 export interface Run {
@@ -64,7 +66,7 @@ export const MODE_INFO: Record<PracticeMode, { icon: string; title: string; desc
 };
 
 const SAFE_ORDER = /all of the above|none of the above|tất cả các|cả [abcd] và|không có (đáp án|phương án)|both a and b/i;
-const makeItems = (list: Question[], shuffleOpts: boolean): RunItem[] =>
+export const makeItems = (list: Question[], shuffleOpts: boolean): RunItem[] =>
   list.map((q) => ({ id: q.id, order: shuffleOpts && !SAFE_ORDER.test(q.options.join(" ")) ? shuffle(q.options.map((_, i) => i)) : q.options.map((_, i) => i) }));
 
 /** Weak, wrong and due questions first, then unseen, then the rest. */
@@ -291,36 +293,57 @@ function relevantContext(docsText: string[], q: Question) {
   return out;
 }
 
+/** Help under an answered question: related theory note + AI explanation (cached on the question). */
 function AIExplain({ q, chosen }: { q: Question; chosen: number[] }) {
   const store = useStore();
-  const [text, setText] = useState("");
+  const live = store.questions.find((x) => x.id === q.id) ?? q;
+  const ai = aiReady(store.settings);
+  const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  useEffect(() => { setText(""); setErr(""); }, [q.id]);
-  if (!aiReady(store.settings)) return <a className="small" href="#/settings">💡 Kết nối AI để được giải thích chi tiết hơn →</a>;
-  const run = async () => {
+  const [noteOpen, setNoteOpen] = useState(false);
+  const note = useMemo(() => noteForQuestion(live, store.notes), [live, store.notes]);
+  useEffect(() => { setShow(false); setErr(""); }, [q.id]);
+  const text = live.aiExplain ?? "";
+
+  const run = async (force = false) => {
+    if (text && !force) return setShow(true);
     setBusy(true);
     setErr("");
     try {
-      const ctx = relevantContext(store.docs.filter((d) => d.deckId === q.deckId).map((d) => d.text), q);
-      setText(await explainQuestion(store.settings, q, chosen, ctx));
+      const docs = store.docs.filter((d) => d.deckId === q.deckId).map((d) => d.text);
+      if (note) docs.unshift(`${note.title}\n${note.content}`);
+      const out = await explainQuestion(store.settings, live, chosen, relevantContext(docs, live));
+      await store.updateQuestion({ ...live, aiExplain: out });
+      setShow(true);
     } catch (e: any) {
       setErr(e.message);
     }
     setBusy(false);
   };
+
   return (
     <div className="ai-explain">
-      {!text && (
-        <button className="btn sm" disabled={busy} onClick={run}>{busy ? <><Spinner /> AI đang phân tích…</> : "🤖 Nhờ AI giảng kỹ hơn"}</button>
-      )}
+      <div className="row gap wrap">
+        {note && <button className="btn sm theory-link" onClick={() => setNoteOpen(true)}>📖 Ôn lý thuyết: {note.title}</button>}
+        {!show && (text || ai) && (
+          <button className="btn sm" disabled={busy} onClick={() => run()}>
+            {busy ? <><Spinner /> AI đang phân tích…</> : text ? "🤖 Xem lời giảng của AI (đã lưu)" : "🤖 Nhờ AI giảng kỹ hơn"}
+          </button>
+        )}
+        {!ai && !text && !note && <a className="small" href="#/settings">💡 Kết nối AI để được giảng giải chi tiết hơn →</a>}
+      </div>
       {err && <div className="callout bad small">{err}</div>}
-      {text && (
+      {show && text && (
         <>
           <Markdown text={text} />
-          {canSpeak() && <button className="btn sm ghost" onClick={() => speak(text.replace(/[#*`]/g, ""))}>🔊 Đọc lời giải</button>}
+          <div className="row gap">
+            {canSpeak() && <button className="btn sm ghost" onClick={() => speak(text.replace(/[#*`|]/g, ""))}>🔊 Đọc lời giải</button>}
+            {ai && <button className="btn sm ghost" disabled={busy} onClick={() => run(true)}>{busy ? <Spinner /> : "↻ Giảng lại"}</button>}
+          </div>
         </>
       )}
+      {noteOpen && note && <NoteModal note={note} onClose={() => setNoteOpen(false)} />}
     </div>
   );
 }

@@ -193,7 +193,7 @@ export interface GenOptions {
   withExplanation: boolean;
 }
 
-const LANG: Record<GenOptions["language"], string> = {
+export const LANG: Record<GenOptions["language"], string> = {
   vi: "Viết bằng tiếng Việt.",
   en: "Write in English.",
   source: "Dùng cùng ngôn ngữ với tài liệu.",

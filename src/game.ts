@@ -79,6 +79,8 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "survival_20", icon: "🛡️", title: "Bất tử", desc: "Sống sót qua 20 câu ở chế độ Sinh tồn", check: (c) => c.game.bestSurvival >= 20 },
   { id: "daily_1", icon: "📅", title: "Thử thách đầu tiên", desc: "Hoàn thành thử thách hằng ngày", check: (c) => c.game.dailyCount >= 1 },
   { id: "daily_10", icon: "🗓️", title: "Chiến binh hằng ngày", desc: "Hoàn thành 10 thử thách hằng ngày", check: (c) => c.game.dailyCount >= 10 },
+  { id: "theory_first", icon: "📖", title: "Nhà lý luận", desc: "Soạn sổ tay lý thuyết đầu tiên" },
+  { id: "theory_reader", icon: "🦉", title: "Hiểu rồi mới làm", desc: "Học xong 5 chủ đề lý thuyết" },
   { id: "night_owl", icon: "🦉", title: "Cú đêm", desc: "Học sau 23 giờ" },
   { id: "early_bird", icon: "🐦", title: "Chim sớm", desc: "Học trước 6 giờ sáng" },
 ];

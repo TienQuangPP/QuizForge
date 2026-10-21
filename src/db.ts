@@ -1,7 +1,7 @@
 // Minimal IndexedDB wrapper. Everything stays on this computer.
 const DB_NAME = "quizforge";
-const DB_VERSION = 1;
-export const STORES = ["decks", "questions", "docs", "progress", "sessions"] as const;
+const DB_VERSION = 2;
+export const STORES = ["decks", "questions", "docs", "progress", "sessions", "notes"] as const;
 export type StoreName = (typeof STORES)[number];
 
 let dbPromise: Promise<IDBDatabase> | null = null;

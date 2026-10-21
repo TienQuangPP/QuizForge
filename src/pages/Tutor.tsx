@@ -38,7 +38,10 @@ export default function Tutor({ deckId }: { deckId?: string }) {
   }, [msgs, deck]);
 
   const context = () => {
-    const parts = docs.map((x) => `### ${x.name}\n${x.text}`);
+    const parts = [
+      ...store.notes.filter((n) => n.deckId === deck).map((n) => `### Lý thuyết: ${n.title}\n${n.content}`),
+      ...docs.map((x) => `### ${x.name}\n${x.text}`),
+    ];
     if (!parts.length) {
       // Fall back to the deck's questions as knowledge.
       const qs = store.questions.filter((q) => q.deckId === deck).slice(0, 150);
