@@ -3,7 +3,7 @@ import { normalize, useStore } from "../store";
 import type { Difficulty, DraftQuestion, PracticeMode, Progress, Question } from "../types";
 import { aiReady, explainQuestion } from "../ai";
 import { letter } from "../parsers";
-import { DiffBadge, Empty, fmtDuration, go, Markdown, Modal, QuestionForm, shuffle, Spinner } from "../ui";
+import { Rich, DiffBadge, Empty, fmtDuration, go, Markdown, Modal, QuestionForm, shuffle, Spinner } from "../ui";
 import { formatInterval, grade } from "../srs";
 import { canSpeak, confetti, sound, speak, stopSpeaking } from "../fx";
 import { dayKey } from "./Dashboard";
@@ -87,7 +87,7 @@ export function startDaily(questions: Question[], progress: Record<string, Progr
   startRun({ mode: "practice", deckIds: [...new Set(list.map((q) => q.deckId))], items: makeItems(list, true), timeLimitSec: 0, title: "🎯 Thử thách hôm nay", daily: true });
 }
 
-type Source = "smart" | "all" | "unseen" | "wrong" | "due" | "flagged";
+type Source = "smart" | "all" | "unseen" | "wrong" | "due" | "flagged" | "misconception";
 const CFG_KEY = "quizforge-practice-cfg";
 
 export function PracticeSetup({ deckId, preset }: { deckId?: string; preset?: string }) {
@@ -97,7 +97,7 @@ export function PracticeSetup({ deckId, preset }: { deckId?: string; preset?: st
   const presetMode = (["practice", "exam", "flash", "speed", "survival"] as PracticeMode[]).find((m) => m === preset);
   const [decks, setDecks] = useState<Set<string>>(new Set(initialDecks));
   const [mode, setMode] = useState<PracticeMode>(presetMode ?? saved.mode ?? "practice");
-  const [source, setSource] = useState<Source>(preset === "wrong" ? "wrong" : preset === "due" ? "due" : saved.source ?? "smart");
+  const [source, setSource] = useState<Source>(preset === "wrong" ? "wrong" : preset === "due" ? "due" : preset === "misconception" ? "misconception" : saved.source ?? "smart");
   const [count, setCount] = useState<number>(saved.count ?? 20);
   const [shuffleQ, setShuffleQ] = useState<boolean>(saved.shuffleQ ?? true);
   const [shuffleO, setShuffleO] = useState<boolean>(saved.shuffleO ?? true);
@@ -124,6 +124,7 @@ export function PracticeSetup({ deckId, preset }: { deckId?: string; preset?: st
       if (source === "wrong") return !!p?.attempts && !p.lastCorrect;
       if (source === "due") return !!p?.attempts && p.due <= now;
       if (source === "flagged") return !!p?.flagged;
+      if (source === "misconception") return p?.lastConf === 2 && !p.lastCorrect;
       return true;
     });
   }, [pool, store.progress, topics, diff, source]);
@@ -207,6 +208,7 @@ export function PracticeSetup({ deckId, preset }: { deckId?: string; preset?: st
             ["wrong", "Đang sai"],
             ["due", "Đến hạn ôn"],
             ["flagged", "Đã đánh dấu"],
+            ["misconception", "⚠️ Hiểu lầm (chắc mà sai)"],
           ] as [Source, string][]).map(([id, label]) => (
             <button key={id} className={"chip" + (source === id ? " on" : "")} onClick={() => setSource(id)}>{label}</button>
           ))}
@@ -263,6 +265,9 @@ export function PracticeSetup({ deckId, preset }: { deckId?: string; preset?: st
         </div>
         {!endless && <label className="check"><input type="checkbox" checked={shuffleQ} onChange={(e) => setShuffleQ(e.target.checked)} /> Trộn thứ tự câu hỏi</label>}
         <label className="check"><input type="checkbox" checked={shuffleO} onChange={(e) => setShuffleO(e.target.checked)} /> Trộn thứ tự đáp án A, B, C, D</label>
+        {mode === "practice" && (
+          <label className="check"><input type="checkbox" checked={store.settings.askConfidence} onChange={(e) => store.setSettings({ askConfidence: e.target.checked })} /> 🎯 Hỏi mức độ tự tin trước khi xem đáp án <span className="muted small">(phát hiện chỗ “tưởng hiểu mà hiểu sai”)</span></label>
+        )}
       </div>
       <button className="btn primary big" disabled={!filtered.length} onClick={begin}>
         {MODE_INFO[mode].icon} Bắt đầu {endless ? "" : `${n} câu `}→
@@ -374,6 +379,7 @@ export function Player() {
   const [showPalette, setShowPalette] = useState(false);
   const [editing, setEditing] = useState<DraftQuestion | null>(null);
   const [pop, setPop] = useState<{ key: number; text: string } | null>(null);
+  const [confs, setConfs] = useState<Record<number, number>>({});
   const [prevBest] = useState(() => ({ speed: store.game.bestSpeed, survival: store.game.bestSurvival }));
   const recorded = useRef(false);
   const advanceTimer = useRef<number | undefined>(undefined);
@@ -394,6 +400,7 @@ export function Player() {
   const remaining = run?.timeLimitSec ? run.timeLimitSec - elapsed : 0;
   const instant = run ? run.mode !== "exam" && run.mode !== "flash" : false; // check on answer
   const auto = run?.mode === "speed" || run?.mode === "survival";
+  const askConf = !!run && run.mode === "practice" && store.settings.askConfidence;
 
   // Persist progress so a refresh or accidental close can resume.
   useEffect(() => {
@@ -490,11 +497,13 @@ export function Player() {
   finishRef.current = finish;
   nextRef.current = next;
 
-  const check = (ans = answers[idx]) => {
+  const check = (ans = answers[idx], conf?: number) => {
     if (!run || !ans?.length || checked[idx]) return;
     setChecked((c) => ({ ...c, [idx]: true }));
     const ok = isCorrect(idx, ans);
-    store.recordAnswer(item.id, ok);
+    // A lucky guess shouldn't earn a long review interval.
+    store.recordAnswer(item.id, ok, ok && conf === 0 ? 1 : undefined, conf);
+    if (conf != null) setConfs((c) => ({ ...c, [idx]: conf }));
     const nextCombo = ok ? combo + 1 : 0;
     setCombo(nextCombo);
     if (nextCombo > bestCombo) setBestCombo(nextCombo);
@@ -529,7 +538,7 @@ export function Player() {
       return;
     }
     setAnswers((prev) => ({ ...prev, [idx]: [disp] }));
-    if (instant) check([disp]);
+    if (instant && !askConf) check([disp]);
   };
 
   const rateFlash = (quality: number) => {
@@ -563,7 +572,7 @@ export function Player() {
       if (n >= 0 && n < cur!.order.length) choose(n);
       else if (k === "enter") {
         e.preventDefault();
-        if (instant) checked[idx] ? next() : check();
+        if (instant) checked[idx] ? next() : check(undefined, askConf ? 1 : undefined);
         else if (run.mode === "exam" && idx === items.length - 1) submitExam();
         else next();
       } else if (k === "arrowright" && run.mode === "exam") {
@@ -633,7 +642,7 @@ export function Player() {
               {p?.attempts ? <span>Trước đó đúng {p.correct}/{p.attempts}</span> : <span>Câu mới</span>}
             </span>
           </div>
-          <div className="qbig">{q.question}</div>
+          <div className="qbig"><Rich text={q.question} /></div>
           {multi && run.mode !== "flash" && <div className="pill warn">Câu này có {q.answers.length} đáp án đúng — chọn đủ rồi bấm Kiểm tra</div>}
           {q.image && <img className="qimg" src={q.image} alt="" />}
 
@@ -645,7 +654,7 @@ export function Player() {
               return (
                 <button key={disp} className={"choice" + cls} onClick={(e) => { e.stopPropagation(); if (run.mode !== "flash") choose(disp); }} disabled={run.mode === "flash"}>
                   <span className="key">{letter(disp)}</span>
-                  <span className="grow">{q.options[orig]}</span>
+                  <Rich className="grow" text={q.options[orig]} />
                   {showAnswer && ok && <span className="mark">✓</span>}
                   {showAnswer && sel && !ok && <span className="mark">✗</span>}
                 </button>
@@ -664,8 +673,10 @@ export function Player() {
           {showAnswer && !(auto && isCorrect(idx)) && (
             <div className={"feedback" + (instant ? (isCorrect(idx) ? " ok" : " no") : "")}>
               {instant && <b className="fb-title">{isCorrect(idx) ? "🎉 Chính xác!" : `❌ Chưa đúng — đáp án đúng là ${cd.map(letter).join(", ")}`}</b>}
+              {confs[idx] === 2 && !isCorrect(idx) && <div className="callout bad small">⚠️ Bạn <b>chắc chắn</b> nhưng lại sai — đây là một <b>hiểu lầm</b>. Đọc kỹ giải thích; câu này sẽ được ưu tiên ôn lại.</div>}
+              {confs[idx] === 0 && isCorrect(idx) && <div className="callout warn small">🎲 Đoán trúng! Hãy đọc giải thích để thật sự hiểu — câu này sẽ được nhắc ôn sớm.</div>}
               {run.mode === "flash" && <b className="fb-title">Đáp án: {cd.map(letter).join(", ")}</b>}
-              {!auto && q.explanation && <p>{q.explanation}</p>}
+              {!auto && q.explanation && <p><Rich text={q.explanation} /></p>}
               {!auto && q.source && <div className="muted small">Nguồn: {q.source}</div>}
               {p && run.mode === "practice" && <div className="muted small">📅 Sẽ nhắc ôn lại sau {formatInterval(p.interval)}</div>}
               {!auto && <AIExplain q={q} chosen={mine.map((d) => order[d])} />}
@@ -696,7 +707,14 @@ export function Player() {
               {isChecked ? (
                 !auto && <button className="btn primary big" onClick={next}>{idx === items.length - 1 ? "Xem kết quả 🏁" : "Câu tiếp theo →"}</button>
               ) : (
-                (multi || !auto) && <button className="btn primary big" disabled={!mine.length} onClick={() => check()}>{mine.length ? "Kiểm tra" : "Chọn một đáp án"}</button>
+                (multi || !auto) && (askConf && mine.length ? (
+                  <div className="conf-pick">
+                    <span className="muted small">Bạn chắc chắn đến đâu?</span>
+                    <button className="btn good" onClick={() => check(undefined, 2)}>😎 Chắc chắn</button>
+                    <button className="btn warn" onClick={() => check(undefined, 1)}>🤔 Phân vân</button>
+                    <button className="btn" onClick={() => check(undefined, 0)}>🎲 Đoán</button>
+                  </div>
+                ) : <button className="btn primary big" disabled={!mine.length} onClick={() => check()}>{mine.length ? "Kiểm tra" : "Chọn một đáp án"}</button>)
               )}
               {!isChecked && !auto && <button className="btn ghost" onClick={next}>Bỏ qua</button>}
             </>
@@ -804,16 +822,16 @@ function Results({ run, items, view, answers, checked, flashRes, isCorrect, elap
           const mine = answers[i] ?? [];
           return (
             <div key={i} className={"card review " + (ok ? "ok" : "no")}>
-              <div className="qtext"><b>{i + 1}.</b> {q.question} {run.mode === "exam" && !mine.length && <span className="pill">Bỏ trống</span>}</div>
+              <div className="qtext"><b>{i + 1}.</b> <Rich text={q.question} /> {run.mode === "exam" && !mine.length && <span className="pill">Bỏ trống</span>}</div>
               {q.image && <img className="qimg-small" src={q.image} alt="" />}
               <ol type="A" className="opts">
                 {order.map((orig, disp) => (
                   <li key={disp} className={(q.answers.includes(orig) ? "correct " : "") + (mine.includes(disp) && !q.answers.includes(orig) ? "picked-wrong" : "")}>
-                    {q.options[orig]} {mine.includes(disp) && <span className="muted">← bạn chọn</span>}
+                    <Rich text={q.options[orig]} /> {mine.includes(disp) && <span className="muted">← bạn chọn</span>}
                   </li>
                 ))}
               </ol>
-              {q.explanation && <div className="explain-mini">💡 {q.explanation}</div>}
+              {q.explanation && <div className="explain-mini">💡 <Rich text={q.explanation} /></div>}
               {!ok && <AIExplain q={q} chosen={mine.map((d) => order[d])} />}
               {!ok && <button className="btn sm ghost" onClick={() => store.toggleFlag(q.id)}>⚑ {store.progress[q.id]?.flagged ? "Đã đánh dấu" : "Đánh dấu ôn sau"}</button>}
             </div>

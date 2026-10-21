@@ -9,7 +9,7 @@ import { FONT_SIZES } from "../Welcome";
 
 const SUGGEST: Record<AIProvider, string[]> = {
   openai: ["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini", "gpt-4o", "gpt-5-mini", "gpt-5"],
-  gemini: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite", "gemini-2.0-flash"],
+  gemini: ["gemini-flash-latest", "gemini-pro-latest", "gemini-flash-lite-latest", "gemini-3.8-flash"],
   compatible: [],
 };
 
@@ -215,6 +215,12 @@ export default function SettingsPage() {
             )}
             {s.provider === "compatible" && <button className="btn sm" disabled={!!busy} onClick={loadModels}>{busy === "models" ? <Spinner /> : "Tải danh sách model"}</button>}
             <datalist id="model-list">{[...new Set([...models, ...SUGGEST[s.provider]])].map((m) => <option key={m} value={m} />)}</datalist>
+            <label>Tốc độ AI</label>
+            <div className="seg">
+              <button className={s.aiSpeed !== "deep" ? "on" : ""} onClick={() => store.setSettings({ aiSpeed: "fast" })}>⚡ Nhanh (khuyên dùng)</button>
+              <button className={s.aiSpeed === "deep" ? "on" : ""} onClick={() => store.setSettings({ aiSpeed: "deep" })}>🧠 Kỹ (chậm hơn ~2 lần)</button>
+            </div>
+            <p className="muted small">Chấm bài, giảng giải và tự giải đề luôn dùng chế độ Kỹ để chính xác.</p>
             <label>Độ sáng tạo (temperature): {s.temperature}</label>
             <input type="range" min={0} max={1} step={0.1} value={s.temperature} onChange={(e) => store.setSettings({ temperature: +e.target.value })} />
             <div className="grid2">
@@ -253,7 +259,7 @@ export default function SettingsPage() {
           {store.decks.length} bộ đề · {store.questions.length} câu hỏi · {store.docs.length} tài liệu · {store.sessions.length} lượt làm bài
         </div>
       </div>
-      <p className="muted small center">QuizForge v1.3.1 · chạy trên máy bạn · AI chỉ dùng khi bạn bấm</p>
+      <p className="muted small center">QuizForge v1.4 · chạy trên máy bạn · AI chỉ dùng khi bạn bấm</p>
     </div>
   );
 }

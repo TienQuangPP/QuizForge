@@ -376,10 +376,142 @@ await test("Bài dở có câu bị xoá: không sập, xoá hết thì nút Là
   return b;
 });
 
+await test("Lộ trình: tạo từ sổ tay (không cần AI) rồi lập lại bằng AI", async () => {
+  const r = await evaluate(`
+    const deck = (await T.db('decks')).find(d => d.name === 'Bộ nhập thử');
+    await T.go('#/deck/' + deck.id + '/course');
+    await T.click('Tạo từ sổ tay'); await T.sleep(400);
+    const fromNotes = T.all('.lesson-card b');
+    window.confirm = () => true;
+    await T.click('Lập lại lộ trình bằng AI'); await T.sleep(1500);
+    const fromAI = T.all('.lesson-card b');
+    const modules = T.all('.module-title');
+    return { fromNotes: fromNotes.length, fromAI, modules, next: !!T.btn('Học tiếp') };`);
+  expect(r.fromNotes >= 3, "không tạo được từ sổ tay");
+  expect(r.fromAI.length === 3 && r.modules.length === 2 && r.next, "lộ trình AI sai: " + JSON.stringify(r));
+  return r.fromAI;
+});
+
+await test("Bài học 4 bước: lý thuyết → tự giải thích (AI chấm) → bài tập tư duy 6 dạng → kiểm tra → thành thạo", async () => {
+  const r = await evaluate(`
+    const deck = (await T.db('decks')).find(d => d.name === 'Bộ nhập thử');
+    const lesson = (await T.db('lessons')).filter(l => l.deckId === deck.id).sort((a, b) => a.order - b.order)[0];
+    await T.go('#/deck/' + deck.id + '/course/' + lesson.id);
+    const out = { title: T.text('.lesson-head h2'), objectives: T.all('.objectives li').length };
+    // 1. theory
+    await T.click('Tôi đã học xong phần này'); await T.sleep(300);
+    // 2. Feynman self-explanation
+    T.set(document.querySelector('.card textarea'), 'Hiểu đơn giản thì ôn lại đúng lúc sắp quên giúp nhớ lâu, ví dụ ôn sau 1 ngày, 3 ngày, 7 ngày.');
+    await T.click('Nhờ AI nhận xét'); await T.sleep(800);
+    out.grade = T.text('.grade-score');
+    out.misconception = T.text('.grade')?.includes('Hiểu chưa đúng');
+    await T.click('Tiếp: Bài tập tư duy'); await T.sleep(200);
+    // 3. thinking exercises (AI creates 6 types)
+    await T.click('AI tạo bài tập'); await T.click('Tạo 6 bài tập'); await T.sleep(1200);
+    await T.click('Làm bài tập'); await T.sleep(300);
+    const types = [];
+    for (let i = 0; i < 6 && document.querySelector('.exercise'); i++) {
+      const head = T.text('.exercise .row');
+      types.push(head.split(String.fromCharCode(10))[0]);
+      if (document.querySelector('.cloze')) { const ins = document.querySelectorAll('.blank input'); T.set(ins[0], 'quen'); if (ins[1]) T.set(ins[1], 'lau dai'); }
+      if (document.querySelector('.match')) { for (const row of document.querySelectorAll('.match-row')) { const sel = row.querySelector('select'); const term = row.querySelector('.match-term').innerText; const map = { 'Active recall': 'Tự nhớ lại không nhìn tài liệu', 'Spaced repetition': 'Ôn giãn cách theo thời gian', 'Interleaving': 'Xen kẽ nhiều dạng bài' }; T.set(sel, map[term]); } }
+      if (document.querySelector('.statement') && T.btn('❌ Sai')) { await T.click('❌ Sai'); T.set(document.querySelector('.exercise textarea'), 'Sai vì tự kiểm tra hiệu quả hơn đọc lại.'); }
+      else if (document.querySelector('.exercise textarea')) T.set(document.querySelector('.exercise textarea'), 'Chia nhỏ thời gian, xen kẽ các môn và tự kiểm tra, ôn giãn cách.');
+      const btn = [...document.querySelectorAll('.exercise button.btn.primary')].pop(); btn.click(); await T.sleep(700);
+      types[types.length - 1] += ' ' + (T.text('.exercise .pill.big') ?? '?');
+      await T.click('Tiếp tục'); await T.sleep(250);
+    }
+    out.types = types;
+    out.summary = T.text('.score-ring');
+    await T.click('Xong'); await T.sleep(200);
+    // 4. quick quiz (AI adds questions if needed)
+    [...document.querySelectorAll('.stepper button')][3].click(); await T.sleep(200);
+    if (T.btn('AI ra thêm 5 câu')) { await T.click('AI ra thêm 5 câu'); await T.sleep(1200); }
+    await T.click('Làm kiểm tra'); await T.sleep(200);
+    let n = 0;
+    while (document.querySelector('.lesson .qbig') && n < 8) {
+      const qs = await T.db('questions');
+      const q = qs.find(x => x.question === document.querySelector('.lesson .qbig').textContent);
+      const choices = [...document.querySelectorAll('.lesson .choice')];
+      for (const a of q.answers) choices[a].click();
+      await T.sleep(80);
+      const kt = [...document.querySelectorAll('.lesson .card button')].find(b => b.textContent.trim() === 'Kiểm tra' && !b.disabled);
+      if (kt) { kt.click(); await T.sleep(250); }
+      const nb = T.btn('Xem kết quả') ?? T.btn('Câu tiếp');
+      if (!nb) return { debug: true, q: q && { text: q.question.slice(0, 60), answers: q.answers, n: q.options.length }, buttons: [...document.querySelectorAll('.lesson button')].map(b => b.textContent.trim() + (b.disabled ? '(off)' : '')).slice(-8), fb: T.text('.lesson .feedback') };
+      nb.click(); await T.sleep(250); n++;
+    }
+    await T.sleep(500);
+    const l2 = (await T.db('lessons')).find(l => l.id === lesson.id);
+    out.mastery = Math.round(l2.mastery * 100);
+    out.reviewDue = !!l2.reviewDue;
+    out.nextBtn = !!T.btn('Sang bài tiếp');
+    return out;`);
+  if (r.debug) throw new Error(JSON.stringify(r));
+  expect(r.grade && r.grade.includes("7"), "AI chưa chấm tự giải thích: " + r.grade);
+  expect(r.types.length === 6, "chưa làm đủ 6 bài tập: " + JSON.stringify(r.types));
+  expect(r.mastery >= 70 && r.reviewDue && r.nextBtn, "bài học chưa thành thạo: " + JSON.stringify(r));
+  return r;
+});
+
+await test("Bài tập tư duy: chấm điền khuyết không dấu, nối đúng, sắp xếp", async () => {
+  const r = await evaluate(`
+    const deck = (await T.db('decks')).find(d => d.name === 'Bộ nhập thử');
+    await T.go('#/deck/' + deck.id + '/exercises');
+    const list = T.all('.qrow').length;
+    const scores = (await T.db('exercises')).filter(e => e.deckId === deck.id).map(e => e.type + ':' + Math.round((e.lastScore ?? -1) * 100));
+    return { list, scores };`);
+  const get = (t) => r.scores.find((x) => x.startsWith(t + ":"));
+  expect(r.list === 6, "danh sách bài tập sai: " + r.list);
+  expect(get("cloze") === "cloze:100", "điền khuyết không dấu bị chấm sai: " + get("cloze"));
+  expect(get("match") === "match:100", "nối khái niệm chấm sai: " + get("match"));
+  return r.scores;
+});
+
+await test("Mức độ tự tin: chắc mà sai → cảnh báo hiểu lầm + trang chủ nhắc sửa", async () => {
+  const r = await evaluate(`
+    const deck = (await T.db('decks')).find(d => d.name === 'Bộ nhập thử');
+    await T.go('#/practice/' + deck.id + '/practice');
+    const box = [...document.querySelectorAll('label.check')].find(l => l.textContent.includes('mức độ tự tin')).querySelector('input');
+    if (!box.checked) box.click();
+    await T.sleep(100);
+    await T.click('Bắt đầu'); await T.sleep(300);
+    const qs = await T.db('questions');
+    const q = qs.find(x => x.question === document.querySelector('.qbig').textContent);
+    const choices = [...document.querySelectorAll('.choice')];
+    const wrong = choices.findIndex((c, i) => !q.answers.includes(i));
+    choices[wrong].click(); await T.sleep(150);
+    const askShown = !!T.btn('Chắc chắn');
+    await T.click('Chắc chắn'); await T.sleep(300);
+    const warn = T.text('.feedback .callout.bad');
+    window.confirm = () => true;
+    await T.click('Kết thúc'); await T.sleep(500);
+    await T.go('#/'); await T.sleep(400);
+    return { askShown, warn, today: T.all('.today-list li b') };`);
+  expect(r.askShown, "không hỏi mức độ tự tin");
+  expect(r.warn && r.warn.includes("hiểu lầm"), "không cảnh báo hiểu lầm");
+  expect(r.today[0] && r.today[0].includes("hiểu lầm"), "trang chủ không nhắc sửa hiểu lầm: " + JSON.stringify(r.today));
+  return r.today;
+});
+
+await test("Công thức toán hiển thị bằng KaTeX trong câu hỏi và lý thuyết", async () => {
+  const r = await evaluate(`
+    const deck = (await T.db('decks')).find(d => d.name === 'Bộ nhập thử');
+    await T.go('#/import/' + deck.id);
+    await T.click('Dán văn bản');
+    T.set(document.querySelector('textarea'), ['Câu 1: Nghiệm của $x^2 = 4$ với $x > 0$ là?', 'A. $x = 2$', 'B. $x = -2$', 'Đáp án: A'].join(String.fromCharCode(10)));
+    await T.click('Nhận dạng câu hỏi');
+    const katex = document.querySelectorAll('.draft .katex').length;
+    const price = 'Giá $5 và $10';
+    return { katex };`);
+  expect(r.katex >= 3, "công thức chưa hiển thị: " + r.katex);
+  return r;
+});
+
 // Every page at phone width: no horizontal overflow
 await send("Emulation.setDeviceMetricsOverride", { width: 375, height: 812, deviceScaleFactor: 2, mobile: true });
 const decksForMobile = await evaluate(`return (await T.db('decks')).map(d => d.id)`);
-for (const hash of ["", "library", "studio", "import", "import/x/external", "practice", "tutor", "achievements", "stats", "help", "settings", `deck/${decksForMobile[0]}`, `deck/${decksForMobile[0]}/theory`, `deck/${decksForMobile[0]}/docs`, `deck/${decksForMobile[0]}/stats`]) {
+for (const hash of [`deck/${decksForMobile.at(-1)}/course`, `deck/${decksForMobile.at(-1)}/exercises`, "", "library", "studio", "import", "import/x/external", "practice", "tutor", "achievements", "stats", "help", "settings", `deck/${decksForMobile[0]}`, `deck/${decksForMobile[0]}/theory`, `deck/${decksForMobile[0]}/docs`, `deck/${decksForMobile[0]}/stats`]) {
   await test(`Điện thoại: #/${hash} không tràn ngang`, async () => {
     await open(hash);
     const r = await evaluate(`

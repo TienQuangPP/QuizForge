@@ -1,3 +1,5 @@
+import type { SubjectId } from "./subjects";
+
 export type Difficulty = "easy" | "medium" | "hard";
 
 export interface Deck {
@@ -7,6 +9,8 @@ export interface Deck {
   emoji: string;
   color: string;
   tags: string[];
+  /** Kind of subject — tunes AI prompts (formulas for math, context for languages…). */
+  subject?: SubjectId;
   createdAt: number;
   updatedAt: number;
 }
@@ -65,6 +69,10 @@ export interface Progress {
   lastCorrect: boolean;
   flagged?: boolean;
   note?: string;
+  /** Confidence given with the last answer: 0 guess, 1 unsure, 2 sure. */
+  lastConf?: number;
+  /** How many times the learner was sure but wrong (a misconception signal). */
+  confWrong?: number;
 }
 
 export type PracticeMode = "practice" | "exam" | "flash" | "speed" | "survival";
@@ -103,6 +111,10 @@ export interface Settings {
   effects: boolean;
   autoRead: boolean;
   speechRate: number;
+  /** fast = lower reasoning effort (about 2x quicker); deep = full reasoning. */
+  aiSpeed: "fast" | "deep";
+  /** Ask "how sure are you?" before revealing the answer in practice mode. */
+  askConfidence: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -110,7 +122,7 @@ export const DEFAULT_SETTINGS: Settings = {
   openaiKey: "",
   openaiModel: "gpt-4.1-mini",
   geminiKey: "",
-  geminiModel: "gemini-2.5-flash",
+  geminiModel: "gemini-flash-latest",
   compatBaseUrl: "https://openrouter.ai/api/v1",
   compatKey: "",
   compatModel: "",
@@ -124,7 +136,64 @@ export const DEFAULT_SETTINGS: Settings = {
   effects: true,
   autoRead: false,
   speechRate: 1,
+  aiSpeed: "fast",
+  askConfidence: false,
 };
+
+/** Bloom's taxonomy level of a learning objective or exercise. */
+export type Bloom = "remember" | "understand" | "apply" | "analyze" | "evaluate" | "create";
+
+/** One lesson of a deck's learning path. */
+export interface Lesson {
+  id: string;
+  deckId: string;
+  module: string;
+  title: string;
+  objectives: string[];
+  concepts: string[];
+  order: number;
+  noteId?: string;
+  /** Per-step results: theory read (1), self-explanation score 0..1, exercises avg 0..1, quiz score 0..1. */
+  steps: { theory?: number; explain?: number; exercises?: number; quiz?: number };
+  mastery: number;
+  explainText?: string;
+  doneAt?: number;
+  reviewStage: number;
+  reviewDue?: number;
+  createdAt: number;
+}
+
+export type ExerciseType = "cloze" | "order" | "match" | "truefalse" | "open" | "error";
+
+/** A thinking exercise (beyond multiple choice). Fields used depend on the type. */
+export interface Exercise {
+  id: string;
+  deckId: string;
+  lessonId?: string;
+  topic?: string;
+  type: ExerciseType;
+  bloom?: Bloom;
+  /** Instruction, question or scenario shown to the learner. */
+  prompt: string;
+  /** cloze: text with [[answer]] or [[a|b]] blanks · error: a passage containing a mistake */
+  text?: string;
+  /** order: steps in the correct order */
+  items?: string[];
+  /** match: [term, description] pairs */
+  pairs?: [string, string][];
+  /** truefalse: the claim and whether it is true */
+  statement?: string;
+  isTrue?: boolean;
+  /** open/error/truefalse: model answer or correction */
+  answer?: string;
+  /** Key points a good answer must contain (used for AI grading and self-assessment). */
+  rubric?: string[];
+  explanation?: string;
+  lastScore?: number;
+  attempts?: number;
+  lastAt?: number;
+  createdAt: number;
+}
 
 export interface DraftQuestion {
   question: string;

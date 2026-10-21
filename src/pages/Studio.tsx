@@ -3,7 +3,7 @@ import { useStore } from "../store";
 import type { DraftQuestion } from "../types";
 import { aiReady, callAI, generateQuestions, QUESTION_TYPES, type GenOptions } from "../ai";
 import { DOC_ACCEPT, extractText, isImage } from "../parsers";
-import { DiffBadge, go, Modal, QuestionForm, Spinner } from "../ui";
+import { Rich, DiffBadge, go, Modal, QuestionForm, Spinner } from "../ui";
 
 const OPTS_KEY = "quizforge-gen-opts";
 const defaultOpts: GenOptions = {
@@ -35,12 +35,12 @@ export function DraftReview({ drafts, setDrafts, picked, setPicked }: {
         <div key={i} className={"draft" + (picked.has(i) ? "" : " off")}>
           <input type="checkbox" checked={picked.has(i)} onChange={() => toggle(i)} />
           <div className="grow">
-            <div className="qtext"><b>{i + 1}.</b> {q.question}</div>
+            <div className="qtext"><b>{i + 1}.</b> <Rich text={q.question} /></div>
             {q.image && <img className="qimg-small" src={q.image} alt="" />}
             <ol type="A" className="opts">
-              {q.options.map((o, j) => <li key={j} className={q.answers.includes(j) ? "correct" : ""}>{o}</li>)}
+              {q.options.map((o, j) => <li key={j} className={q.answers.includes(j) ? "correct" : ""}><Rich text={o} /></li>)}
             </ol>
-            {q.explanation && <div className="explain-mini">💡 {q.explanation}</div>}
+            {q.explanation && <div className="explain-mini">💡 <Rich text={q.explanation} /></div>}
             <div className="row gap small">
               {q.topic && <span className="pill">{q.topic}</span>}
               <DiffBadge d={q.difficulty} />
@@ -140,7 +140,7 @@ export default function Studio({ deckId, docId }: { deckId?: string; docId?: str
       setBusy("AI đang tạo câu hỏi…");
       setProgress([0, 1]);
       let offset = drafts.length;
-      const out = await generateQuestions(store.settings, text, opts, name, (d, t, got) => {
+      const out = await generateQuestions(store.settings, text, { ...opts, subject: store.decks.find((d) => d.id === id)?.subject }, name, (d, t, got) => {
         setProgress([d, t]);
         setDrafts((prev) => [...prev, ...got]);
         // newly appended items are selected by default

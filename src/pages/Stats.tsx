@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { deckStats, useStore } from "../store";
 import { dayKey, useActivity } from "./Dashboard";
-import { Empty, fmtDuration, Progress, Stat } from "../ui";
+import { Empty, fmtDuration, go, Progress, Rich, Stat } from "../ui";
 
 const DAY = 86_400_000;
 
@@ -43,6 +43,26 @@ export default function Stats() {
         <Stat label="Đã thuộc" value={`${all.mastered}/${all.total}`} tone="good" />
         <Stat label="Chuỗi ngày" value={`🔥 ${streak}`} tone="warm" />
       </div>
+
+      {(() => {
+        const mis = store.questions.filter((q) => { const p = store.progress[q.id]; return p?.lastConf === 2 && !p.lastCorrect; });
+        const rated = Object.values(store.progress).filter((p) => p.lastConf != null);
+        const sureRight = rated.filter((p) => p.lastConf === 2 && p.lastCorrect).length;
+        const sure = rated.filter((p) => p.lastConf === 2).length;
+        if (!rated.length) return null;
+        return (
+          <div className="card stack">
+            <h3>🎯 Độ tự tin & hiểu lầm</h3>
+            <p className="muted small">Khi bạn chọn “😎 Chắc chắn”, bạn đúng <b>{sure ? Math.round((sureRight / sure) * 100) : 0}%</b> số lần. Câu “chắc mà sai” là <b>hiểu lầm</b> — nguy hiểm hơn câu không biết, cần sửa trước.</p>
+            {mis.length > 0 ? (
+              <>
+                {mis.slice(0, 5).map((q) => <div key={q.id} className="list-row"><span className="grow"><Rich text={q.question.slice(0, 140)} /></span><span className="pill bad">chắc mà sai</span></div>)}
+                <button className="btn primary" onClick={() => go("practice/all/misconception")}>⚠️ Sửa {mis.length} hiểu lầm</button>
+              </>
+            ) : <p className="good">✅ Hiện không có hiểu lầm nào.</p>}
+          </div>
+        );
+      })()}
 
       <div className="grid2">
         <div className="card">

@@ -1,6 +1,41 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { DraftQuestion, Difficulty } from "./types";
 import { letter, compressImage } from "./parsers";
+import katex from "katex";
+import "katex/dist/katex.min.css";
+
+const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// $…$ (display) or $…$ (inline). Inline math must not start/end with a space and the closing $
+// must not be followed by a digit, so prices like "$5 và $10" stay plain text.
+const MATH_RE = /\$\$([^$]+?)\$\$|\$(?=[^\s$])([^$\n]*?[^\s$])\$(?!\d)/g;
+
+function renderMath(tex: string, display: boolean) {
+  try {
+    return katex.renderToString(tex, { displayMode: display, throwOnError: false, strict: "ignore", output: "html" });
+  } catch {
+    return escHtml(tex);
+  }
+}
+
+/** Escapes text and renders any $math$ in it; `transform` runs on the non-math parts. */
+export function withMath(text: string, transform: (escaped: string) => string = (x) => x): string {
+  if (!text.includes("$")) return transform(escHtml(text));
+  let out = "";
+  let last = 0;
+  for (const m of text.matchAll(MATH_RE)) {
+    out += transform(escHtml(text.slice(last, m.index)));
+    out += m[1] != null ? renderMath(m[1], true) : renderMath(m[2], false);
+    last = m.index! + m[0].length;
+  }
+  return out + transform(escHtml(text.slice(last)));
+}
+
+/** Plain text (questions, options, explanations) with formula support. */
+export function Rich({ text, className }: { text: string; className?: string }) {
+  if (!text.includes("$")) return <span className={className}>{text}</span>;
+  return <span className={className} dangerouslySetInnerHTML={{ __html: withMath(text) }} />;
+}
 
 export function useHashRoute(): [string[], (path: string) => void] {
   const read = () => location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
@@ -75,12 +110,14 @@ export const DiffBadge = ({ d }: { d?: Difficulty }) => (d ? <span className={"b
 
 /** Tiny, safe Markdown renderer (headings, bold, italic, code, lists, tables, quotes). */
 export function mdToHtml(text: string): string {
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const esc = escHtml;
   const inline = (s: string) =>
-    esc(s)
-      .replace(/`([^`]+)`/g, "<code>$1</code>")
-      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-      .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+    withMath(s, (t) =>
+      t
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>"),
+    );
   const html: string[] = [];
   let list: "ul" | "ol" | null = null;
   let code = false;
@@ -209,15 +246,15 @@ export function QuestionPreview({ q, index }: { q: DraftQuestion; index?: number
     <div className="qpreview">
       <div className="qtext">
         {index != null && <b>Câu {index + 1}. </b>}
-        {q.question}
+        <Rich text={q.question} />
       </div>
       {q.image && <img className="qimg-small" src={q.image} alt="" />}
       <ol className="opts" type="A">
         {q.options.map((o, i) => (
-          <li key={i} className={q.answers.includes(i) ? "correct" : ""}>{o}</li>
+          <li key={i} className={q.answers.includes(i) ? "correct" : ""}><Rich text={o} /></li>
         ))}
       </ol>
-      {q.explanation && <div className="explain-mini">💡 {q.explanation}</div>}
+      {q.explanation && <div className="explain-mini">💡 <Rich text={q.explanation} /></div>}
     </div>
   );
 }

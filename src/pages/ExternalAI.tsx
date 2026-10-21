@@ -51,9 +51,9 @@ export default function ExternalAI({ target, ensureDeck, onQuestions, initialKin
   const material = materialFull.slice(0, MAX_MATERIAL);
   const prompt = useMemo(
     () => kind === "questions"
-      ? buildQuestionPrompt({ ...opts, mode, material, topic })
-      : buildTheoryPrompt({ language: opts.language, depth: opts.depth, instructions: opts.instructions, mode, material, topic }),
-    [kind, opts, mode, material, topic],
+      ? buildQuestionPrompt({ ...opts, mode, material, topic, subject: store.decks.find((d) => d.id === target)?.subject })
+      : buildTheoryPrompt({ language: opts.language, depth: opts.depth, instructions: opts.instructions, mode, material, topic, subject: store.decks.find((d) => d.id === target)?.subject }),
+    [kind, opts, mode, material, topic, target, store.decks],
   );
 
   const copy = async () => {

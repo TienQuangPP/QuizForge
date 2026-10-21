@@ -105,7 +105,7 @@ export default function TheoryTab({ deckId, noteId }: { deckId: string; noteId?:
     try {
       if (replaceAll && notes.length) await store.deleteNotes(notes.map((n) => n.id));
       let first: string | undefined;
-      const all = await generateTheory(store.settings, src.text, opts, knownTopics, async (d, t, got) => {
+      const all = await generateTheory(store.settings, src.text, { ...opts, subject: deck.subject }, knownTopics, async (d, t, got) => {
         setProgress([d, t]);
         const saved = await store.addNotes(deckId, got.map((g) => ({ ...g, source: "ai" as const })));
         first ??= saved[0]?.id;
@@ -135,7 +135,7 @@ export default function TheoryTab({ deckId, noteId }: { deckId: string; noteId?:
     }
     setBusy("AI đang viết chủ đề…");
     try {
-      const d = await writeTopicNote(store.settings, title, contextFor(title, deckId, store.docs, store.questions), opts);
+      const d = await writeTopicNote(store.settings, title, contextFor(title, deckId, store.docs, store.questions), { ...opts, subject: deck.subject });
       const [n] = await store.addNotes(deckId, [{ ...d, source: "ai" }]);
       setAddOpen(false);
       setNewTitle("");
@@ -152,7 +152,7 @@ export default function TheoryTab({ deckId, noteId }: { deckId: string; noteId?:
     setBusy(depth === "detailed" ? "AI đang giảng lại chi tiết hơn…" : "AI đang rút gọn…");
     setErr("");
     try {
-      const d = await writeTopicNote(store.settings, current.title, contextFor(current.title, deckId, store.docs, store.questions), { ...opts, depth }, current.content);
+      const d = await writeTopicNote(store.settings, current.title, contextFor(current.title, deckId, store.docs, store.questions), { ...opts, depth, subject: deck.subject }, current.content);
       const before = current;
       await store.saveNotes([{ ...current, summary: d.summary ?? current.summary, content: d.content, updatedAt: Date.now() }]);
       store.toast("Đã viết lại", "info", { label: "↶ Bản cũ", run: () => store.saveNotes([before]) });

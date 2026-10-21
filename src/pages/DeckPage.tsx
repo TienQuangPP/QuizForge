@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import { deckStats, normalize, useStore } from "../store";
 import type { DraftQuestion, Question, SourceDoc } from "../types";
-import { blankQuestion, confirmBox, DiffBadge, Empty, go, Modal, Progress, QuestionForm, Spinner, Stat, timeAgo } from "../ui";
+import { Rich, blankQuestion, confirmBox, DiffBadge, Empty, go, Modal, Progress, QuestionForm, Spinner, Stat, timeAgo } from "../ui";
 import { DOC_ACCEPT, download, extractText, isImage, letter, questionsToCSV, questionsToText } from "../parsers";
 import { DeckForm } from "./Library";
 import { formatInterval } from "../srs";
 import TheoryTab from "./TheoryTab";
+import CourseTab, { nextLessonOf } from "./CourseTab";
+import ExercisesTab from "./Exercises";
+import { subjectOf } from "../subjects";
 
 type Filter = "all" | "wrong" | "flagged" | "unseen" | "mastered" | "due";
 
@@ -40,7 +43,7 @@ function QuestionRow({ q, index, selected, onSelect, onEdit }: { q: Question; in
       <input type="checkbox" checked={selected} onChange={onSelect} aria-label="Chọn câu" />
       <div className="qrow-main" onClick={() => setOpen(!open)}>
         <div className="qrow-title">
-          <span className="muted">#{index + 1}</span> {q.question}
+          <span className="muted">#{index + 1}</span> <Rich text={q.question} />
         </div>
         <div className="row gap small">
           {q.topic && <span className="pill">{q.topic}</span>}
@@ -60,10 +63,10 @@ function QuestionRow({ q, index, selected, onSelect, onEdit }: { q: Question; in
             {q.image && <img className="qimg-small" src={q.image} alt="" />}
             <ol type="A" className="opts">
               {q.options.map((o, i) => (
-                <li key={i} className={q.answers.includes(i) ? "correct" : ""}>{o}</li>
+                <li key={i} className={q.answers.includes(i) ? "correct" : ""}><Rich text={o} /></li>
               ))}
             </ol>
-            {q.explanation && <div className="explain-mini">💡 {q.explanation}</div>}
+            {q.explanation && <div className="explain-mini">💡 <Rich text={q.explanation} /></div>}
             {q.source && <div className="muted small">Nguồn: {q.source}</div>}
           </div>
         )}
@@ -390,7 +393,9 @@ export default function DeckPage({ id, tab = "questions", sub }: { id?: string; 
   };
 
   const tabs = [
+    { id: "course", label: `🗺️ Lộ trình (${store.lessons.filter((l) => l.deckId === id).length})` },
     { id: "questions", label: `Câu hỏi (${qs.length})` },
+    { id: "exercises", label: `🧩 Bài tập (${store.exercises.filter((e) => e.deckId === id).length})` },
     { id: "theory", label: `📖 Lý thuyết (${store.notes.filter((n) => n.deckId === id).length})` },
     { id: "docs", label: `Tài liệu (${store.docs.filter((d) => d.deckId === id).length})` },
     { id: "stats", label: "Tiến độ" },
@@ -399,12 +404,15 @@ export default function DeckPage({ id, tab = "questions", sub }: { id?: string; 
   return (
     <div className="page">
       <a className="back" href="#/library">← Thư viện</a>
+      {!(tab === "course" && sub) && (
+        <>
       <div className="deck-head" style={{ ["--c" as any]: deck.color }}>
         <div className="deck-emoji big">{deck.emoji}</div>
         <div className="grow">
           <h1>{deck.name}</h1>
           {deck.description && <p className="muted">{deck.description}</p>}
           <div className="row gap small">
+            <span className="pill" title="Loại môn — đổi trong ✎ Sửa">{subjectOf(deck.subject).icon} {subjectOf(deck.subject).label}</span>
             {deck.tags.map((t) => <span key={t} className="pill">{t}</span>)}
             <span className="muted">Đã thuộc {st.mastered}/{st.total}</span>
           </div>
@@ -421,7 +429,19 @@ export default function DeckPage({ id, tab = "questions", sub }: { id?: string; 
         </div>
       </div>
 
+      {(() => {
+        const ls = store.lessons.filter((l) => l.deckId === deck.id);
+        const nx = nextLessonOf(ls);
+        return nx ? (
+          <button className="continue-btn" onClick={() => go(`deck/${deck.id}/course/${nx.id}`)}>
+            <span>▶</span>
+            <span className="grow"><b>Học tiếp: {nx.title}</b><small>Lộ trình {ls.filter((l) => l.mastery >= 0.7).length}/{ls.length} bài · {nx.module}</small></span>
+          </button>
+        ) : null;
+      })()}
       <div className="action-grid">
+        <button className="action" onClick={() => go(`deck/${deck.id}/course`)}><span>🗺️</span>Lộ trình học<small>Học theo bài, có mục tiêu</small></button>
+        <button className="action" onClick={() => go(`deck/${deck.id}/exercises`)}><span>🧩</span>Bài tập tư duy<small>Tự luận, tình huống, sắp xếp…</small></button>
         <button className="action" disabled={!qs.length} onClick={() => go(`practice/${deck.id}/practice`)}><span>🎯</span>Luyện tập<small>Phản hồi ngay từng câu</small></button>
         <button className="action" disabled={!qs.length} onClick={() => go(`practice/${deck.id}/exam`)}><span>📝</span>Thi thử<small>Bấm giờ, chấm cuối bài</small></button>
         <button className="action" disabled={!qs.length} onClick={() => go(`practice/${deck.id}/flash`)}><span>🃏</span>Thẻ ghi nhớ<small>Lặp lại ngắt quãng</small></button>
@@ -431,13 +451,15 @@ export default function DeckPage({ id, tab = "questions", sub }: { id?: string; 
         <button className="action" onClick={() => go(`deck/${deck.id}/theory`)}><span>📖</span>Học lý thuyết<small>Sổ tay theo chủ đề</small></button>
         <button className="action" onClick={() => go(`tutor/${deck.id}`)}><span>🤖</span>Gia sư AI<small>Hỏi về giáo trình</small></button>
       </div>
+        </>
+      )}
 
       <div className="tabs">
         {tabs.map((t) => (
           <a key={t.id} href={`#/deck/${deck.id}/${t.id}`} className={tab === t.id ? "on" : ""}>{t.label}</a>
         ))}
       </div>
-      {tab === "theory" ? <TheoryTab deckId={deck.id} noteId={sub} /> : tab === "docs" ? <DocsTab deckId={deck.id} /> : tab === "stats" ? <StatsTab deckId={deck.id} /> : <QuestionsTab deckId={deck.id} />}
+      {tab === "course" ? <CourseTab deckId={deck.id} lessonId={sub} /> : tab === "exercises" ? <ExercisesTab deckId={deck.id} /> : tab === "theory" ? <TheoryTab deckId={deck.id} noteId={sub} /> : tab === "docs" ? <DocsTab deckId={deck.id} /> : tab === "stats" ? <StatsTab deckId={deck.id} /> : <QuestionsTab deckId={deck.id} />}
 
       {editing && <DeckForm deck={deck} onClose={() => setEditing(false)} />}
       {exportOpen && (

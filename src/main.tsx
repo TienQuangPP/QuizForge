@@ -5,6 +5,7 @@ import { StoreProvider } from "./store";
 import "./styles.css";
 import "./styles-v11.css";
 import "./styles-theory.css";
+import "./styles-course.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

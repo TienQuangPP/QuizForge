@@ -5,6 +5,7 @@ import { go, Progress, Stat, timeAgo } from "../ui";
 import { SAMPLE_DECK } from "../sample";
 import { levelOf, levelTitle, xpForLevel } from "../game";
 import { discardSavedRun, loadSavedRun, MODE_INFO, startDaily } from "./Practice";
+import TodayPlan from "./TodayPlan";
 
 const DAY = 86_400_000;
 export const dayKey = (t: number) => new Date(t).toLocaleDateString("sv-SE");
@@ -126,6 +127,8 @@ export default function Dashboard() {
           💾 Đã lâu bạn chưa sao lưu. Dữ liệu chỉ nằm trong trình duyệt này — <a href="#/settings">bấm vào đây để sao lưu</a> phòng khi máy hỏng hoặc xoá lịch sử duyệt web.
         </div>
       )}
+
+      <TodayPlan />
 
       <div className="dash-grid">
         <LevelCard />

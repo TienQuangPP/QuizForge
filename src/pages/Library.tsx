@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { DECK_COLORS, DECK_EMOJIS, deckStats, normalize, useStore } from "../store";
 import type { Deck } from "../types";
+import { SUBJECTS, type SubjectId } from "../subjects";
 import { Empty, go, Modal, Progress, QuestionPreview, timeAgo, useHashRoute } from "../ui";
 
 export function DeckForm({ deck, onClose, onSaved }: { deck?: Deck; onClose: () => void; onSaved?: (d: Deck) => void }) {
@@ -10,9 +11,10 @@ export function DeckForm({ deck, onClose, onSaved }: { deck?: Deck; onClose: () 
   const [emoji, setEmoji] = useState(deck?.emoji ?? DECK_EMOJIS[0]);
   const [color, setColor] = useState(deck?.color ?? DECK_COLORS[0]);
   const [tags, setTags] = useState((deck?.tags ?? []).join(", "));
+  const [subject, setSubject] = useState<SubjectId>(deck?.subject ?? "general");
   const save = async () => {
     if (!name.trim()) return;
-    const data = { name: name.trim(), description, emoji, color, tags: tags.split(",").map((t) => t.trim()).filter(Boolean) };
+    const data = { name: name.trim(), description, emoji, color, subject, tags: tags.split(",").map((t) => t.trim()).filter(Boolean) };
     if (deck) {
       await store.updateDeck({ ...deck, ...data });
       onSaved?.({ ...deck, ...data });
@@ -38,6 +40,14 @@ export function DeckForm({ deck, onClose, onSaved }: { deck?: Deck; onClose: () 
       <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} placeholder="VD: Kinh tế vi mô — Chương 1-5" />
       <label>Mô tả</label>
       <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Môn học, giảng viên, kỳ thi…" />
+      <label>Loại môn học <span className="muted">(giúp AI ra đề, bài tập đúng kiểu môn)</span></label>
+      <div className="subject-pick">
+        {SUBJECTS.map((s) => (
+          <button key={s.id} type="button" className={subject === s.id ? "on" : ""} onClick={() => setSubject(s.id)} title={s.examples}>
+            <span>{s.icon}</span>{s.label}
+          </button>
+        ))}
+      </div>
       <label>Thẻ (cách nhau bằng dấu phẩy)</label>
       <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="giữa kỳ, chương 2, tiếng Anh" />
       <label>Biểu tượng</label>

@@ -1,9 +1,11 @@
 // Theory handbook: AI writing + matching between questions and topic notes.
-import { normalize } from "./store";
+import { normalize } from "./text";
 import type { Question, Settings, SourceDoc, TheoryNote } from "./types";
 import { callAI, chunkText, LANG, parseJSON, type GenOptions } from "./ai";
+import { subjectOf } from "./subjects";
 
 export interface TheoryOptions {
+  subject?: string;
   language: GenOptions["language"];
   depth: "brief" | "detailed";
   instructions: string;
@@ -39,6 +41,7 @@ export async function generateTheory(
   const system = `Bạn là giảng viên giỏi, soạn SỔ TAY LÝ THUYẾT ôn thi từ giáo trình: chính xác, dễ hiểu, có cấu trúc.
 - Chỉ dựa vào tài liệu; không bịa. Chia nội dung thành các chủ đề logic (thường 3–8 chủ đề cho mỗi phần tài liệu).
 - ${LANG[opts.language]}
+- Môn học: ${subjectOf(opts.subject).label}. ${subjectOf(opts.subject).hint}
 ${THEORY_FORMAT(opts.depth)}
 Trả về DUY NHẤT JSON: {"topics":[{"title":"Tên chủ đề ngắn gọn","summary":"Một câu tóm tắt","content":"Markdown…"}]}`;
   const out: TheoryDraft[] = [];

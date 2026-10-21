@@ -1,6 +1,8 @@
 // Prompts for using a web chat AI (ChatGPT, Gemini, Claude…) without an API key.
 // The answer is pasted back and parsed by parsePasted / parseTheoryMarkdown.
 import { QUESTION_TYPES, type GenOptions } from "./ai";
+import { EXERCISE_SCHEMA } from "./course";
+import { subjectOf } from "./subjects";
 
 export const EXTERNAL_AIS = [
   { name: "ChatGPT", url: "https://chatgpt.com/", icon: "🟢" },
@@ -24,7 +26,19 @@ function materialBlock(mode: MaterialMode, material: string, topic: string) {
   return "TÀI LIỆU: xem (các) file tôi đính kèm trong tin nhắn này. Chỉ dùng nội dung trong file.";
 }
 
-export function buildQuestionPrompt(o: GenOptions & { mode: MaterialMode; material: string; topic: string }) {
+/** Thinking exercises for web chat AIs; the answer is pasted back as JSON. */
+export function externalExercisePrompt(topic: string, subject?: string) {
+  return `Bạn là giáo viên giỏi. Hãy ra 8 BÀI TẬP TƯ DUY (không phải trắc nghiệm) về chủ đề "${topic}" để người học hiểu sâu thay vì học vẹt.
+- Buộc người học tự nhớ lại, lập luận, vận dụng vào tình huống mới; trải đều các tầng Bloom, ít nhất một nửa từ Vận dụng trở lên.
+- Dùng đủ các loại: cloze, order, match, truefalse, open, error.
+- Viết bằng tiếng Việt. Môn học: ${subjectOf(subject).label}. ${subjectOf(subject).hint}
+- Nếu tôi đính kèm tài liệu, chỉ dùng nội dung trong tài liệu.
+
+ĐỊNH DẠNG: chỉ trả về MỘT khối code \`\`\`json duy nhất.
+${EXERCISE_SCHEMA}`;
+}
+
+export function buildQuestionPrompt(o: GenOptions & { mode: MaterialMode; material: string; topic: string; subject?: string }) {
   const types = QUESTION_TYPES.filter((t) => o.types.includes(t.id)).map((t) => t.label);
   return `Bạn là chuyên gia ra đề thi. Hãy soạn ${o.count} câu hỏi trắc nghiệm chất lượng cao để tôi ôn thi.
 
@@ -36,6 +50,7 @@ ${types.length ? `- Dạng câu hỏi (phân bổ đều): ${types.join("; ")}.\
 - ${o.withExplanation ? "Mỗi câu có giải thích ngắn: vì sao đáp án đúng, vì sao các phương án khác sai." : "Giải thích có thể để trống."}
 - Chỉ hỏi kiến thức quan trọng; không hỏi về số trang, tên file, định dạng.
 - Kiểm tra lại từng đáp án cho chắc chắn đúng trước khi trả lời.
+- Môn học: ${subjectOf(o.subject).label}. ${subjectOf(o.subject).hint}
 ${o.instructions.trim() ? `- Yêu cầu thêm: ${o.instructions.trim()}\n` : ""}
 ĐỊNH DẠNG TRẢ LỜI (bắt buộc)
 Chỉ trả về MỘT khối code \`\`\`json duy nhất, không viết gì thêm, theo đúng mẫu:
@@ -52,12 +67,13 @@ Chỉ trả về MỘT khối code \`\`\`json duy nhất, không viết gì thê
 ${materialBlock(o.mode, o.material, o.topic)}`;
 }
 
-export function buildTheoryPrompt(o: { language: GenOptions["language"]; depth: "brief" | "detailed"; instructions: string; mode: MaterialMode; material: string; topic: string }) {
+export function buildTheoryPrompt(o: { language: GenOptions["language"]; depth: "brief" | "detailed"; instructions: string; mode: MaterialMode; material: string; topic: string; subject?: string }) {
   return `Bạn là giảng viên giỏi. Hãy soạn SỔ TAY LÝ THUYẾT ôn thi: chính xác, dễ hiểu, chia thành các chủ đề logic.
 
 YÊU CẦU
 - ${LANG_TEXT[o.language]}
 - ${o.depth === "detailed" ? "Giải thích chi tiết, dễ hiểu như giảng cho người mới." : "Ngắn gọn, súc tích để ôn nhanh."}
+- Môn học: ${subjectOf(o.subject).label}. ${subjectOf(o.subject).hint}
 ${o.instructions.trim() ? `- Yêu cầu thêm: ${o.instructions.trim()}\n` : ""}
 ĐỊNH DẠNG TRẢ LỜI (bắt buộc, Markdown)
 Mỗi chủ đề bắt đầu bằng một dòng "## Tên chủ đề", dòng tiếp theo là "> một câu tóm tắt", rồi đến các mục (bỏ mục nào không phù hợp):

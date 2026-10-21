@@ -6,10 +6,10 @@
 
 ### Biến mọi giáo trình thành trắc nghiệm với AI ⚡
 
-Tải lên PDF, Word, PowerPoint hay ảnh chụp đề. AI soạn câu hỏi có đáp án, lời giải và sổ tay lý thuyết.<br>
-Luyện tập như chơi game, nhớ lâu nhờ lịch ôn thông minh.
+Tải lên PDF, Word, PowerPoint hay ảnh chụp đề. AI lập **lộ trình học**, soạn **lý thuyết**, ra **bài tập tư duy** và câu hỏi có lời giải.<br>
+Học để **hiểu** chứ không học vẹt — luyện như chơi game, nhớ lâu nhờ lịch ôn thông minh. Dùng được cho **mọi môn**.
 
-[![Version](https://img.shields.io/badge/version-1.3.1-6366f1?style=for-the-badge)](https://github.com/TienQuangPP/QuizForge/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.4.0-6366f1?style=for-the-badge)](https://github.com/TienQuangPP/QuizForge/releases/latest)
 [![Windows](https://img.shields.io/badge/Windows-portable-0ea5e9?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/TienQuangPP/QuizForge/releases/latest)
 [![Gemini](https://img.shields.io/badge/Gemini-supported-8b5cf6?style=for-the-badge&logo=googlegemini&logoColor=white)](#-kết-nối-ai)
 [![ChatGPT](https://img.shields.io/badge/ChatGPT-supported-10b981?style=for-the-badge&logo=openai&logoColor=white)](#-kết-nối-ai)
@@ -23,6 +23,29 @@ Luyện tập như chơi game, nhớ lâu nhờ lịch ôn thông minh.
 [❓ Hỏi đáp](#-hỏi-đáp-nhanh)
 
 </div>
+
+---
+
+## 🆕 Mới ở v1.4: học để hiểu, không học vẹt
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/course.png" alt="Lộ trình học"><p align="center"><b>🗺️ Lộ trình học</b>: chương → bài, mục tiêu theo thang Bloom</p></td>
+<td width="50%"><img src="docs/screenshots/lesson.png" alt="Bài học 4 bước"><p align="center"><b>Mỗi bài 4 bước</b>: Học → Tự giải thích → Bài tập tư duy → Kiểm tra</p></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/exercise.png" alt="Bài tập tư duy"><p align="center"><b>🧩 Bài tập tư duy</b>: chấm chặt, gõ "CO2" thay cho O₂ là sai</p></td>
+<td width="50%"><img src="docs/screenshots/dashboard.png" alt="Hôm nay học gì"><p align="center"><b>📋 Hôm nay học gì?</b>: một danh sách việc, mỗi việc một nút</p></td>
+</tr>
+</table>
+
+- **🗺️ Lộ trình học**: AI chia giáo trình thành chương → bài theo thứ tự tiên quyết. Mỗi bài có mục tiêu đo được (Nêu được, Giải thích được, Vận dụng, Phân tích…) và điểm thành thạo. Bài đã thành thạo được nhắc **ôn lại sau 1 – 3 – 7 – 16 – 35 ngày**. Không có AI thì tạo lộ trình từ sổ tay lý thuyết.
+- **🗣️ Tự giải thích (kỹ thuật Feynman)**: viết lại bài học bằng lời của bạn. AI chấm theo ý chính, chỉ ra **ý còn thiếu** và **chỗ hiểu sai**. Khi thử với Gemini thật, AI bắt được cả 2 lỗi hiểu sai cài sẵn ("O₂ sinh ra từ CO₂", "pha tối diễn ra ban đêm").
+- **🧩 Bài tập tư duy** 6 dạng: ✍️ điền khuyết · 🔢 sắp xếp quy trình · 🔗 nối khái niệm · ⚖️ đúng/sai **kèm lý do** · 🧠 tự luận/tình huống · 🕵️ tìm lỗi sai. Trải từ Nhớ → Đánh giá. Không có AI vẫn tự chấm theo thang tiêu chí.
+- **🎯 Mức độ tự tin**: trả lời kèm "😎 Chắc chắn / 🤔 Phân vân / 🎲 Đoán". **Chắc mà sai** là *hiểu lầm nguy hiểm*, được ưu tiên sửa trước; **đoán trúng** thì không được tính là đã thuộc.
+- **📚 Mọi môn học**: chọn loại môn (Toán·Lý·Hoá, Sinh·Y, Xã hội·Luật·Kinh tế, Ngoại ngữ, Lập trình, Chuyên ngành) để AI ra đề đúng kiểu. **Công thức** hiển thị đẹp: $x^2$, $\frac{a}{b}$, $H_2SO_4$.
+- **📋 Hôm nay học gì?** trên trang chủ cho người không rành công nghệ.
+- **🤖 AI bền bỉ hơn**: tự chuyển model khi Google ngừng model cũ, tự thử lại khi quá tải, khi hết lượt miễn phí của một model thì tự dùng model khác. Chế độ "Nhanh" giúp AI trả lời nhanh gấp đôi.
 
 ---
 
@@ -199,7 +222,7 @@ Thêm **🧠 chế độ chọn câu thông minh** (ưu tiên câu yếu), **�
 
 | Nhà cung cấp | Chi phí | Lấy key |
 |---|---|---|
-| **Google Gemini** ⭐ khuyên dùng | Miễn phí với mức dùng vừa phải | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| **Google Gemini** ⭐ khuyên dùng | Miễn phí (giới hạn số lần mỗi ngày cho từng model; app tự đổi model khi hết lượt) | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | **OpenAI (ChatGPT)** | Trả theo lượng dùng (20 câu ≈ dưới 1.000đ) | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | **OpenRouter · Groq · DeepSeek** | Tuỳ nhà cung cấp | Chuẩn API OpenAI |
 | **Ollama · LM Studio** | Miễn phí, chạy trên máy bạn | Không cần key |
@@ -240,6 +263,9 @@ PDF dạng ảnh không có chữ để đọc. Hãy chụp màn hình từng tr
 npm install
 npm run dev        # chạy bản phát triển
 npm run portable   # build + đóng gói ../QuizForge_Portable(.zip)
+npm run test:parser && npm run test:grading   # kiểm thử nhận dạng câu hỏi và chấm điểm
+npm run test:e2e   # 40 kịch bản trên trình duyệt thật (cần vite preview + tests/mock-ai.mjs)
+GEMINI_API_KEY=... npm run test:gemini        # thử với Gemini thật
 ```
 
 **Công nghệ:** React 19 · Vite · TypeScript · IndexedDB · pdf.js · mammoth · JSZip. Không cần backend.
@@ -251,6 +277,8 @@ npm run portable   # build + đóng gói ../QuizForge_Portable(.zip)
 src/
 ├── ai.ts          # OpenAI / Gemini / API tương thích: tạo đề, trích xuất, giảng giải
 ├── theory.ts      # Sổ tay lý thuyết + ghép câu hỏi ↔ chủ đề
+├── course.ts      # Lộ trình học, bài tập tư duy, chấm điểm, độ thành thạo
+├── subjects.ts    # Hồ sơ môn học (định hướng AI theo từng loại môn)
 ├── parsers.ts     # Đọc PDF/DOCX/PPTX/XLSX/CSV/JSON, nhận dạng "Câu 1: … Đáp án: …"
 ├── srs.ts         # Thuật toán lặp lại ngắt quãng (SM-2)
 ├── game.ts        # XP, cấp độ, huy hiệu
@@ -259,12 +287,13 @@ src/
 ```
 </details>
 
-Đánh giá trải nghiệm theo 3 kiểu người dùng: [docs/DANH_GIA_TRAI_NGHIEM.md](docs/DANH_GIA_TRAI_NGHIEM.md)
+Đánh giá trải nghiệm: [vòng 1 — 3 kiểu người dùng](docs/DANH_GIA_TRAI_NGHIEM.md) · [vòng 2 — chuyên gia giáo dục & thử với Gemini thật](docs/DANH_GIA_V2.md)
 
 ## 🗺️ Lịch sử phiên bản
 
 | Phiên bản | Điểm nổi bật |
 |---|---|
+| **1.4** | 🗺️ Lộ trình học, 🧩 bài tập tư duy 6 dạng, 🗣️ tự giải thích (AI chấm), 🎯 mức độ tự tin, 📚 mọi môn + công thức, 📋 Hôm nay học gì, AI tự đổi model / thử lại |
 | **1.3** | 🌐 Dùng ChatGPT/Gemini/Claude web không cần key, nhận dạng câu hỏi dán vào chính xác hơn, cảnh báo câu thiếu đáp án |
 | **1.2** | 📖 Sổ tay lý thuyết, ôn lý thuyết khi làm sai, lưu lời giảng AI |
 | **1.1** | 🎮 Game hoá, ⚡ Đua tốc độ, ❤️ Sinh tồn, 👵 cỡ chữ lớn, đọc to, tự lưu bài |

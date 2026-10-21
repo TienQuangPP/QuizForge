@@ -1,0 +1,98 @@
+/* ---------- v1.4: learning path, thinking exercises, today plan ---------- */
+.tabs { overflow-x: auto; scrollbar-width: none; }
+.tabs a { white-space: nowrap; }
+.continue-btn { display: flex; gap: 14px; align-items: center; width: 100%; text-align: left; border: 0; border-radius: var(--radius); padding: 14px 18px; background: linear-gradient(135deg, var(--brand), var(--brand2)); color: #fff; font: inherit; cursor: pointer; box-shadow: 0 6px 18px rgba(91, 91, 240, 0.3); }
+.continue-btn > span:first-child { width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); display: grid; place-items: center; font-size: 1.1rem; flex-shrink: 0; }
+.continue-btn small { display: block; opacity: 0.85; font-size: 0.8rem; }
+.continue-btn:hover { filter: brightness(1.06); }
+
+.subject-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.subject-pick button { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border: 2px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); font: inherit; font-size: 0.85rem; cursor: pointer; text-align: left; }
+.subject-pick button span { font-size: 1.1rem; }
+.subject-pick button.on { border-color: var(--brand); background: var(--brand-soft); font-weight: 600; }
+
+/* Today plan */
+.today h2 { margin-bottom: 6px; }
+.today-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; counter-reset: t; }
+.today-list li { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--panel2); }
+.today-list li:first-child { background: var(--brand-soft); outline: 2px solid var(--brand); }
+.today-icon { font-size: 1.4rem; width: 34px; text-align: center; flex-shrink: 0; }
+.today-list b { display: block; }
+.today-list small { color: var(--muted); font-size: 0.8rem; }
+
+/* Course */
+.course-head { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.course-head .bar { margin-top: 6px; }
+.module-title { margin: 8px 0 0; color: var(--muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.lesson-card { display: flex; gap: 14px; align-items: center; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); box-shadow: var(--shadow); }
+.lesson-card:hover { text-decoration: none; border-color: var(--brand); }
+.lesson-card.next { border: 2px solid var(--brand); }
+.lesson-card b { display: block; }
+.lesson-card small { display: block; margin: 2px 0 4px; }
+.lesson-num { font-size: 1.5rem; width: 36px; text-align: center; flex-shrink: 0; }
+.lesson-bar { width: 140px; }
+.dot-step { opacity: 0.25; font-size: 0.85rem; }
+.dot-step.on { opacity: 1; }
+.lesson-head h2 { font-size: 1.5rem; margin: 4px 0 8px; }
+.objectives { margin-top: 10px; background: var(--panel2); border-radius: 12px; padding: 10px 14px; }
+.objectives ul { margin: 6px 0 0; padding-left: 20px; }
+.stepper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.stepper button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border: 2px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); font: inherit; font-size: 0.85rem; cursor: pointer; }
+.stepper button.on { border-color: var(--brand); background: var(--brand-soft); font-weight: 600; }
+.stepper button.done .step-num { background: var(--good); color: #fff; }
+.stepper small { color: var(--muted); }
+.step-num { width: 26px; height: 26px; border-radius: 50%; background: var(--panel2); display: grid; place-items: center; font-weight: 700; font-size: 0.8rem; }
+.tips { margin: 0; padding-left: 20px; }
+
+/* Exercises */
+.exercise { display: flex; flex-direction: column; gap: 12px; }
+.ex-prompt { font-size: 1.1rem; font-weight: 600; line-height: 1.5; }
+.ex-icon { font-size: 1.3rem; }
+.cloze { line-height: 2.4; font-size: 1.02rem; }
+.blank { display: inline-flex; flex-direction: column; vertical-align: middle; margin: 0 4px; }
+.blank input { display: inline-block; padding: 3px 8px; border-width: 0 0 2px; border-radius: 6px 6px 0 0; background: var(--panel2); min-width: 6ch; max-width: 100%; }
+.blank input.ok { border-color: var(--good); background: var(--good-soft); }
+.blank input.no { border-color: var(--bad); background: var(--bad-soft); }
+.blank-answer { font-size: 0.8rem; color: var(--good); line-height: 1.2; font-weight: 600; }
+.order-list { margin: 0; padding-left: 26px; display: flex; flex-direction: column; gap: 6px; }
+.order-list li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.order-list li.ok { border-color: var(--good); background: var(--good-soft); }
+.order-list li.no { border-color: var(--bad); background: var(--bad-soft); }
+.match { display: flex; flex-direction: column; gap: 8px; }
+.match-row { display: grid; grid-template-columns: minmax(120px, 1fr) 2fr; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 10px; }
+.match-row small { grid-column: 2; }
+.match-row.ok { background: var(--good-soft); }
+.match-row.no { background: var(--bad-soft); }
+.statement { margin: 0; padding: 10px 14px; border-left: 4px solid var(--brand); background: var(--panel2); border-radius: 0 10px 10px 0; font-size: 1.02rem; }
+.selfcheck { display: flex; flex-direction: column; gap: 6px; }
+.grade { display: flex; gap: 16px; align-items: flex-start; padding: 14px; border-radius: 14px; background: var(--panel2); }
+.grade.good { background: var(--good-soft); }
+.grade.warn { background: var(--warn-soft); }
+.grade.bad { background: var(--bad-soft); }
+.grade ul { margin: 4px 0 0; padding-left: 20px; }
+.grade p { margin: 0; }
+.grade-score { min-width: 64px; height: 64px; border-radius: 50%; background: var(--panel); display: grid; place-content: center; text-align: center; flex-shrink: 0; }
+.grade-score b { font-size: 1.5rem; line-height: 1; }
+.grade-score small { color: var(--muted); }
+.warn-text { color: var(--warn); }
+.conf-pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+.conf-pick .muted { width: 100%; text-align: center; }
+
+/* KaTeX: keep formulas inside narrow cards */
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+.choice .katex, .qbig .katex { font-size: 1.05em; }
+
+@media (max-width: 760px) {
+  .stepper { grid-template-columns: repeat(2, 1fr); }
+  .lesson-bar { width: 80px; }
+  .match-row { grid-template-columns: 1fr; }
+  .match-row small { grid-column: 1; }
+  .today-list li { flex-wrap: wrap; }
+  .today-list li .btn { width: 100%; }
+  .grade { flex-direction: column; }
+}
+/* On phones all deck tabs stay visible (wrapping) instead of hiding behind a horizontal scroll. */
+@media (max-width: 760px) {
+  .tabs { flex-wrap: wrap; overflow: visible; gap: 2px; }
+  .tabs a { padding: 8px 10px; font-size: 0.85rem; }
+}
