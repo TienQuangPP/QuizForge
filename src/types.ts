@@ -51,7 +51,7 @@ export interface Progress {
   note?: string;
 }
 
-export type PracticeMode = "practice" | "exam" | "flash";
+export type PracticeMode = "practice" | "exam" | "flash" | "speed" | "survival";
 
 export interface Session {
   id: string;
@@ -62,6 +62,8 @@ export interface Session {
   durationSec: number;
   at: number;
   wrongIds: string[];
+  daily?: boolean;
+  bestCombo?: number;
 }
 
 export type AIProvider = "openai" | "gemini" | "compatible";
@@ -80,6 +82,11 @@ export interface Settings {
   dailyGoal: number;
   examSecondsPerQuestion: number;
   showExplanationAlways: boolean;
+  fontScale: number;
+  sound: boolean;
+  effects: boolean;
+  autoRead: boolean;
+  speechRate: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -96,6 +103,11 @@ export const DEFAULT_SETTINGS: Settings = {
   dailyGoal: 30,
   examSecondsPerQuestion: 60,
   showExplanationAlways: true,
+  fontScale: 1,
+  sound: true,
+  effects: true,
+  autoRead: false,
+  speechRate: 1,
 };
 
 export interface DraftQuestion {

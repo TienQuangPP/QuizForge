@@ -3,6 +3,8 @@ import * as db from "./db";
 import { uid } from "./db";
 import { DEFAULT_SETTINGS, type Deck, type DraftQuestion, type Progress, type Question, type Session, type Settings, type SourceDoc } from "./types";
 import { grade } from "./srs";
+import { ACHIEVEMENTS, GAME_KEY, levelOf, levelTitle, loadGame, type GameCtx, type GameState } from "./game";
+import { confetti, setFxSettings, sound } from "./fx";
 
 const SETTINGS_KEY = "quizforge-settings-v1";
 
@@ -20,7 +22,8 @@ function loadSettings(): Settings {
 export const normalize = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
-export interface Toast { id: string; text: string; kind: "ok" | "err" | "info" }
+export interface Toast { id: string; text: string; kind: "ok" | "err" | "info" | "win"; action?: { label: string; run: () => void } }
+export interface Snapshot { decks?: Deck[]; questions?: Question[]; docs?: SourceDoc[]; progress?: Progress[] }
 
 function useStoreValue() {
   const [ready, setReady] = useState(false);
@@ -31,6 +34,7 @@ function useStoreValue() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [settings, setSettingsState] = useState<Settings>(loadSettings);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [game, setGame] = useState<GameState>(loadGame);
 
   const reload = useCallback(async () => {
     const [d, q, dc, p, s] = await Promise.all([
@@ -63,11 +67,78 @@ function useStoreValue() {
     return () => mq.removeEventListener("change", apply);
   }, [settings.theme]);
 
-  const toast = useCallback((text: string, kind: Toast["kind"] = "ok") => {
+  useEffect(() => {
+    document.documentElement.style.setProperty("--fs", String(settings.fontScale || 1));
+    setFxSettings(settings);
+  }, [settings]);
+
+  const dismissToast = useCallback((id: string) => setToasts((t) => t.filter((x) => x.id !== id)), []);
+  const toast = useCallback((text: string, kind: Toast["kind"] = "ok", action?: Toast["action"]) => {
     const id = uid();
-    setToasts((t) => [...t, { id, text, kind }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3800);
+    setToasts((t) => [...t.slice(-3), { id, text, kind, action }]);
+    setTimeout(() => dismissToast(id), action ? 8000 : kind === "win" ? 5000 : 3800);
+  }, [dismissToast]);
+
+  const patchGame = useCallback((fn: (g: GameState) => GameState) => {
+    setGame((g) => {
+      const next = fn(g);
+      localStorage.setItem(GAME_KEY, JSON.stringify(next));
+      return next;
+    });
   }, []);
+
+  const addXp = useCallback((n: number) => {
+    if (n <= 0) return;
+    setGame((g) => {
+      const next = { ...g, xp: g.xp + n };
+      localStorage.setItem(GAME_KEY, JSON.stringify(next));
+      const before = levelOf(g.xp), after = levelOf(next.xp);
+      if (after > before) {
+        const t = levelTitle(after);
+        setTimeout(() => {
+          toast(`${t.icon} Lên cấp ${after}! Danh hiệu: ${t.name}`, "win");
+          sound("level");
+          confetti(160);
+        });
+      }
+      return next;
+    });
+  }, [toast]);
+
+  const unlock = useCallback((id: string) => {
+    setGame((g) => {
+      if (g.unlocked[id]) return g;
+      const a = ACHIEVEMENTS.find((x) => x.id === id);
+      if (!a) return g;
+      const next = { ...g, unlocked: { ...g.unlocked, [id]: Date.now() }, xp: g.xp + 50 };
+      localStorage.setItem(GAME_KEY, JSON.stringify(next));
+      setTimeout(() => {
+        toast(`${a.icon} Huy hiệu mới: ${a.title} (+50 XP)`, "win");
+        sound("badge");
+        confetti(90);
+      });
+      return next;
+    });
+  }, [toast]);
+
+  const checkAchievements = useCallback((ctx: Omit<GameCtx, "game">) => {
+    for (const a of ACHIEVEMENTS) if (a.check && !game.unlocked[a.id] && a.check({ ...ctx, game })) unlock(a.id);
+  }, [game, unlock]);
+
+  const restore = useCallback(async (snap: Snapshot) => {
+    await db.putMany("decks", snap.decks ?? []);
+    await db.putMany("questions", snap.questions ?? []);
+    await db.putMany("docs", snap.docs ?? []);
+    await db.putMany("progress", snap.progress ?? []);
+    if (snap.decks?.length) setDecks((d) => [...snap.decks!, ...d.filter((x) => !snap.decks!.some((y) => y.id === x.id))]);
+    if (snap.questions?.length) setQuestions((q) => [...q, ...snap.questions!].sort((a, b) => a.createdAt - b.createdAt));
+    if (snap.docs?.length) setDocs((d) => [...d, ...snap.docs!]);
+    if (snap.progress?.length) setProgress((p) => ({ ...p, ...Object.fromEntries(snap.progress!.map((x) => [x.qid, x])) }));
+  }, []);
+
+  const offerUndo = useCallback((text: string, snap: Snapshot) => {
+    toast(text, "info", { label: "↶ Hoàn tác", run: () => restore(snap).then(() => toast("Đã khôi phục")) });
+  }, [toast, restore]);
 
   const setSettings = useCallback((patch: Partial<Settings>) => {
     setSettingsState((s) => {
@@ -110,8 +181,14 @@ function useStoreValue() {
 
   const deleteDeck = useCallback(
     async (deckId: string) => {
-      const qids = questions.filter((q) => q.deckId === deckId).map((q) => q.id);
-      const dids = docs.filter((d) => d.deckId === deckId).map((d) => d.id);
+      const snap: Snapshot = {
+        decks: decks.filter((d) => d.id === deckId),
+        questions: questions.filter((q) => q.deckId === deckId),
+        docs: docs.filter((d) => d.deckId === deckId),
+      };
+      const qids = snap.questions!.map((q) => q.id);
+      const dids = snap.docs!.map((d) => d.id);
+      snap.progress = qids.map((id) => progress[id]).filter(Boolean);
       await db.deleteMany("questions", qids);
       await db.deleteMany("progress", qids);
       await db.deleteMany("docs", dids);
@@ -124,8 +201,9 @@ function useStoreValue() {
         qids.forEach((id) => delete n[id]);
         return n;
       });
+      offerUndo(`Đã xoá bộ đề “${snap.decks![0]?.name ?? ""}”`, snap);
     },
-    [questions, docs],
+    [decks, questions, docs, progress, offerUndo],
   );
 
   /** Adds questions, skipping exact duplicates already in the deck. Returns number added. */
@@ -153,7 +231,9 @@ function useStoreValue() {
     setQuestions((qs) => qs.map((x) => (x.id === q.id ? q : x)));
   }, []);
 
-  const deleteQuestions = useCallback(async (ids: string[]) => {
+  const deleteQuestions = useCallback(async (ids: string[], silent = false) => {
+    const idSet = new Set(ids);
+    const snap: Snapshot = { questions: questions.filter((q) => idSet.has(q.id)), progress: ids.map((id) => progress[id]).filter(Boolean) };
     await db.deleteMany("questions", ids);
     await db.deleteMany("progress", ids);
     const set = new Set(ids);
@@ -163,7 +243,8 @@ function useStoreValue() {
       ids.forEach((id) => delete n[id]);
       return n;
     });
-  }, []);
+    if (!silent) offerUndo(`Đã xoá ${ids.length} câu hỏi`, snap);
+  }, [questions, progress, offerUndo]);
 
   const moveQuestions = useCallback(
     async (ids: string[], deckId: string, copy: boolean) => {
@@ -189,9 +270,11 @@ function useStoreValue() {
   }, []);
 
   const deleteDoc = useCallback(async (id: string) => {
+    const snap: Snapshot = { docs: docs.filter((d) => d.id === id) };
     await db.deleteMany("docs", [id]);
     setDocs((d) => d.filter((x) => x.id !== id));
-  }, []);
+    offerUndo(`Đã xoá tài liệu ${snap.docs![0]?.name ?? ""}`, snap);
+  }, [docs, offerUndo]);
 
   const recordAnswer = useCallback(
     async (qid: string, correct: boolean, quality?: number) => {
@@ -237,8 +320,9 @@ function useStoreValue() {
       docs,
       progress: Object.values(progress),
       sessions,
+      game,
     }),
-    [decks, questions, docs, progress, sessions],
+    [decks, questions, docs, progress, sessions, game],
   );
 
   const importBackup = useCallback(
@@ -249,9 +333,10 @@ function useStoreValue() {
       await db.putMany("docs", data.docs ?? []);
       await db.putMany("progress", data.progress ?? []);
       await db.putMany("sessions", data.sessions ?? []);
+      if (data.game) patchGame((g) => (replace ? { ...g, ...data.game } : { ...g, xp: Math.max(g.xp, data.game.xp ?? 0), unlocked: { ...data.game.unlocked, ...g.unlocked } }));
       await reload();
     },
-    [reload],
+    [reload, patchGame],
   );
 
   const wipe = useCallback(async () => {
@@ -260,8 +345,8 @@ function useStoreValue() {
   }, [reload]);
 
   return {
-    ready, decks, questions, docs, progress, sessions, settings, toasts,
-    toast, setSettings, createDeck, updateDeck, deleteDeck, addQuestions, updateQuestion,
+    ready, decks, questions, docs, progress, sessions, settings, toasts, game,
+    toast, dismissToast, setSettings, addXp, unlock, patchGame, checkAchievements, restore, createDeck, updateDeck, deleteDeck, addQuestions, updateQuestion,
     deleteQuestions, moveQuestions, addDoc, deleteDoc, recordAnswer, toggleFlag, resetProgress,
     addSession, exportAll, importBackup, wipe,
   };

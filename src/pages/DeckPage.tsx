@@ -158,7 +158,6 @@ function QuestionsTab({ deckId }: { deckId: string }) {
             if (!confirmBox(`Xoá ${selected.length} câu hỏi?`)) return;
             await store.deleteQuestions(selected);
             setSel(new Set());
-            store.toast("Đã xoá");
           }}>🗑 Xoá</button>
           <button className="btn sm ghost" onClick={() => setSel(new Set())}>Bỏ chọn</button>
         </div>
@@ -190,7 +189,6 @@ function QuestionsTab({ deckId }: { deckId: string }) {
             <>
               {editing !== "new" && (
                 <button className="btn danger ghost" onClick={async () => {
-                  if (!confirmBox("Xoá câu hỏi này?")) return;
                   await store.deleteQuestions([editing.id]);
                   setEditing(null);
                 }}>Xoá</button>
@@ -289,7 +287,7 @@ function DocsTab({ deckId }: { deckId: string }) {
               <button className="btn sm" onClick={() => setView(d)}>Xem</button>
               <button className="btn sm primary" onClick={() => go(`studio/${deckId}/${d.id}`)}>✨ Tạo câu hỏi</button>
               <button className="btn sm" onClick={() => go(`tutor/${deckId}`)}>🤖 Hỏi AI</button>
-              <button className="icon-btn" title="Xoá" onClick={() => confirmBox(`Xoá tài liệu ${d.name}?`) && store.deleteDoc(d.id)}>🗑</button>
+              <button className="icon-btn" title="Xoá" onClick={() => store.deleteDoc(d.id)}>🗑</button>
             </div>
           ))}
         </div>
@@ -415,9 +413,8 @@ export default function DeckPage({ id, tab = "questions" }: { id?: string; tab?:
           <button className="btn ghost" onClick={() => setExportOpen(true)}>⤓ Xuất / In</button>
           <button className="btn ghost danger" onClick={async () => {
             if (!confirmBox(`Xoá bộ đề “${deck.name}” cùng ${qs.length} câu hỏi và tài liệu?`)) return;
-            await store.deleteDeck(deck.id);
-            store.toast("Đã xoá bộ đề");
             go("library");
+            await store.deleteDeck(deck.id);
           }}>🗑</button>
         </div>
       </div>

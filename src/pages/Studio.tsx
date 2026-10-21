@@ -160,6 +160,7 @@ export default function Studio({ deckId, docId }: { deckId?: string; docId?: str
     const id = await ensureDeck();
     const chosen = drafts.filter((_, i) => picked.has(i));
     const n = await store.addQuestions(id, chosen);
+    if (n) store.patchGame((g) => ({ ...g, aiGenerated: g.aiGenerated + n }));
     store.toast(`Đã lưu ${n} câu vào bộ đề${chosen.length - n ? ` (bỏ ${chosen.length - n} câu trùng)` : ""}`);
     setDrafts([]);
     setPicked(new Set());

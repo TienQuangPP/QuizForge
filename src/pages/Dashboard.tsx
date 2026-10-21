@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { deckStats, useStore } from "../store";
 import { aiReady } from "../ai";
 import { go, Progress, Stat, timeAgo } from "../ui";
 import { SAMPLE_DECK } from "../sample";
+import { levelOf, levelTitle, xpForLevel } from "../game";
+import { discardSavedRun, loadSavedRun, MODE_INFO, startDaily } from "./Practice";
 
 const DAY = 86_400_000;
 export const dayKey = (t: number) => new Date(t).toLocaleDateString("sv-SE");
@@ -25,22 +27,50 @@ export function useActivity() {
       streak++;
       t -= DAY;
     }
-    return { byDay, streak, today: byDay[dayKey(Date.now())] ?? { answered: 0, correct: 0, seconds: 0 } };
+    const answered = sessions.reduce((n, s) => n + s.total, 0);
+    return { byDay, streak, answered, today: byDay[dayKey(Date.now())] ?? { answered: 0, correct: 0, seconds: 0 } };
   }, [sessions]);
+}
+
+export function LevelCard({ compact }: { compact?: boolean }) {
+  const { game } = useStore();
+  const lv = levelOf(game.xp);
+  const t = levelTitle(lv);
+  const from = xpForLevel(lv), to = xpForLevel(lv + 1);
+  return (
+    <a className={"level-card" + (compact ? " compact" : "")} href="#/achievements" title="Xem thành tích">
+      <span className="level-badge">{t.icon}</span>
+      <span className="grow">
+        <b>Cấp {lv} · {t.name}</b>
+        <Progress value={(game.xp - from) / (to - from)} />
+        <small>{game.xp - from}/{to - from} XP lên cấp {lv + 1}</small>
+      </span>
+    </a>
+  );
 }
 
 export default function Dashboard() {
   const store = useStore();
-  const { decks, questions, progress, settings, sessions } = store;
+  const { decks, questions, progress, settings, sessions, game } = store;
   const all = deckStats(questions, progress);
   const { streak, today } = useActivity();
-  const goalPct = Math.min(1, today.answered / Math.max(1, settings.dailyGoal));
+  // Count questions touched today too, so an unfinished quiz still moves the ring.
+  const todayCount = useMemo(() => {
+    const k = dayKey(Date.now());
+    const touched = Object.values(progress).filter((p) => p.attempts && dayKey(p.lastAt) === k).length;
+    return Math.max(today.answered, touched);
+  }, [progress, today.answered]);
+  const goalPct = Math.min(1, todayCount / Math.max(1, settings.dailyGoal));
   const ai = aiReady(settings);
+  const [saved, setSaved] = useState(loadSavedRun);
+  const dailyDone = game.dailyDone === dayKey(Date.now());
+  const lastBackup = +(localStorage.getItem("quizforge-last-backup") || 0);
+  const needBackup = questions.length >= 20 && Date.now() - lastBackup > 14 * DAY;
 
   const createSample = async () => {
     const d = await store.createDeck({ name: SAMPLE_DECK.name, description: SAMPLE_DECK.description, emoji: "🧭" });
     await store.addQuestions(d.id, SAMPLE_DECK.questions);
-    store.toast("Đã tạo bộ mẫu — thử luyện tập ngay!");
+    store.toast("Đã tạo bộ mẫu — bấm Luyện tập để thử!");
     go("deck/" + d.id);
   };
 
@@ -50,49 +80,77 @@ export default function Dashboard() {
   return (
     <div className="page">
       <div className="hero">
-        <div>
+        <div className="grow">
           <h1>{hello} 👋</h1>
-          <p className="muted">Tải lên bất kỳ giáo trình nào (PDF, Word, PowerPoint, ảnh…) — AI sẽ biến nó thành bộ trắc nghiệm để bạn luyện.</p>
-          <div className="row gap">
-            <button className="btn primary" onClick={() => go("studio")}>✨ Tạo đề từ giáo trình</button>
+          <p className="muted">Đưa tài liệu học vào, AI sẽ biến nó thành câu hỏi trắc nghiệm để bạn luyện và nhớ lâu.</p>
+          <div className="hero-actions">
+            <button className="btn primary" onClick={() => go("studio")}>✨ Tạo đề từ tài liệu</button>
             <button className="btn" onClick={() => go("import")}>📥 Nhập câu hỏi có sẵn</button>
             {all.due > 0 && <button className="btn accent" onClick={() => go("practice/all/due")}>🔁 Ôn {all.due} câu đến hạn</button>}
           </div>
         </div>
-        <div className="goal-ring" style={{ ["--p" as any]: goalPct }}>
+        <div className="goal-ring" style={{ ["--p" as any]: goalPct }} title="Mục tiêu hôm nay — đổi trong Cài đặt">
           <div>
-            <b>{today.answered}</b>
-            <small>/ {settings.dailyGoal} câu hôm nay</small>
+            <b>{todayCount}</b>
+            <small>/ {settings.dailyGoal} câu<br />hôm nay</small>
           </div>
         </div>
       </div>
 
-      {!ai && (
-        <div className="callout warn">
-          <b>Chưa kết nối AI.</b> Bạn vẫn dùng được mọi tính năng nhập/luyện đề. Để AI tự tạo câu hỏi, giải thích và làm gia sư, hãy{" "}
-          <a href="#/settings">nhập API key ChatGPT hoặc Gemini</a> (Gemini có gói miễn phí).
+      {saved && (
+        <div className="callout resume">
+          <span className="grow">
+            ⏸️ Bạn đang làm dở <b>{saved.run.title}</b> ({MODE_INFO[saved.run.mode].title}, câu {saved.idx + 1}/{saved.run.items.length})
+          </span>
+          <button className="btn primary sm" onClick={() => go("play")}>▶ Làm tiếp</button>
+          <button className="btn ghost sm" onClick={() => { discardSavedRun(); setSaved(null); }}>Bỏ bài này</button>
         </div>
       )}
 
+      {!ai && (
+        <div className="callout warn">
+          <b>Chưa kết nối AI.</b> Bạn vẫn luyện và nhập đề bình thường được. Muốn AI tự soạn câu hỏi từ tài liệu thì{" "}
+          <a href="#/settings">làm theo 5 bước hướng dẫn tại đây</a> (miễn phí với Gemini).
+        </div>
+      )}
+      {needBackup && (
+        <div className="callout">
+          💾 Đã lâu bạn chưa sao lưu. Dữ liệu chỉ nằm trong trình duyệt này — <a href="#/settings">bấm vào đây để sao lưu</a> phòng khi máy hỏng hoặc xoá lịch sử duyệt web.
+        </div>
+      )}
+
+      <div className="dash-grid">
+        <LevelCard />
+        {questions.length > 0 && (
+          <div className={"daily" + (dailyDone ? " done" : "")}>
+            <div className="daily-icon">{dailyDone ? "✅" : "🎯"}</div>
+            <div className="grow">
+              <b>Thử thách hôm nay</b>
+              <small>{dailyDone ? `Đã hoàn thành! Đã làm ${game.dailyCount} thử thách. Quay lại ngày mai nhé.` : "10 câu chọn riêng cho bạn · thưởng +100 XP"}</small>
+            </div>
+            {!dailyDone && <button className="btn primary" onClick={() => startDaily(questions, progress)}>Chơi</button>}
+          </div>
+        )}
+      </div>
+
       <div className="stats-row">
-        <Stat label="Bộ đề" value={decks.length} />
-        <Stat label="Câu hỏi" value={all.total} />
-        <Stat label="Đã thuộc" value={all.mastered} sub={all.total ? `${Math.round((all.mastered / all.total) * 100)}%` : undefined} tone="good" />
+        <Stat label="Chuỗi ngày học" value={`🔥 ${streak}`} tone="warm" />
+        <Stat label="Câu hỏi" value={all.total} sub={`${decks.length} bộ đề`} />
+        <Stat label="Đã thuộc" value={all.mastered} sub={all.total ? `${Math.round((all.mastered / all.total) * 100)}% tổng số` : undefined} tone="good" />
         <Stat label="Độ chính xác" value={all.seen ? Math.round(all.accuracy * 100) + "%" : "—"} />
-        <Stat label="Chuỗi ngày" value={`🔥 ${streak}`} tone="warm" />
       </div>
 
       <div className="section-head">
-        <h2>Bộ đề gần đây</h2>
+        <h2>Bộ đề của bạn</h2>
         <a href="#/library">Xem tất cả →</a>
       </div>
       {decks.length === 0 ? (
-        <div className="card center">
-          <p>Bạn chưa có bộ đề nào.</p>
-          <div className="row gap center">
-            <button className="btn primary" onClick={() => go("studio")}>✨ Tạo bằng AI</button>
-            <button className="btn" onClick={() => go("library/new")}>＋ Tạo bộ trống</button>
-            <button className="btn ghost" onClick={createSample}>🧭 Dùng thử bộ mẫu</button>
+        <div className="card center start-cards">
+          <h3>Bắt đầu thế nào?</h3>
+          <div className="start-grid">
+            <button className="start" onClick={createSample}><span>🧭</span><b>Dùng thử ngay</b><small>Mở bộ câu hỏi mẫu để xem app hoạt động ra sao</small></button>
+            <button className="start" onClick={() => go("studio")}><span>✨</span><b>Tôi có tài liệu</b><small>PDF, Word, PowerPoint… để AI ra câu hỏi</small></button>
+            <button className="start" onClick={() => go("import")}><span>📥</span><b>Tôi có sẵn câu hỏi</b><small>File Excel, Word hoặc ảnh chụp đề</small></button>
           </div>
         </div>
       ) : (
@@ -106,7 +164,7 @@ export default function Dashboard() {
                 <div className="muted small">{st.total} câu · cập nhật {timeAgo(d.updatedAt)}</div>
                 <Progress value={st.total ? st.mastered / st.total : 0} color={d.color} />
                 <div className="small muted">
-                  Đã học {st.seen}/{st.total} {st.due > 0 && <span className="pill warn">{st.due} đến hạn</span>}
+                  Đã học {st.seen}/{st.total} {st.due > 0 && <span className="pill warn">{st.due} cần ôn</span>}
                 </div>
               </a>
             );
@@ -123,11 +181,9 @@ export default function Dashboard() {
           <div className="card list">
             {sessions.slice(0, 5).map((s) => (
               <div key={s.id} className="list-row">
-                <span>{s.mode === "exam" ? "📝 Thi thử" : s.mode === "flash" ? "🃏 Thẻ nhớ" : "🎯 Luyện tập"}</span>
+                <span>{MODE_INFO[s.mode]?.icon} {s.daily ? "Thử thách ngày" : MODE_INFO[s.mode]?.title}</span>
                 <span className="muted">{s.deckIds.map((id) => decks.find((d) => d.id === id)?.name ?? "—").join(", ")}</span>
-                <b className={s.correct / s.total >= 0.8 ? "good" : s.correct / s.total >= 0.5 ? "" : "bad"}>
-                  {s.correct}/{s.total}
-                </b>
+                <b className={s.correct / s.total >= 0.8 ? "good" : s.correct / s.total >= 0.5 ? "" : "bad"}>{s.correct}/{s.total}</b>
                 <span className="muted small">{timeAgo(s.at)}</span>
               </div>
             ))}
