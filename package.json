@@ -1,6 +1,6 @@
 {
   "name": "quizforge",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,8 @@
     "test:parser": "node --experimental-strip-types --no-warnings tests/parser.test.mts",
     "test:e2e": "node tests/e2e.mjs",
     "test:grading": "node --import ./tests/ts-resolve.mjs --experimental-strip-types --no-warnings tests/grading.test.mts",
-    "test:gemini": "node --import ./tests/ts-resolve.mjs --experimental-strip-types --no-warnings tests/gemini-live.mts"
+    "test:gemini": "node --import ./tests/ts-resolve.mjs --experimental-strip-types --no-warnings tests/gemini-live.mts",
+    "test:fallback": "node --import ./tests/ts-resolve.mjs --experimental-strip-types --no-warnings tests/fallback.test.mts"
   },
   "dependencies": {
     "jszip": "^3.10.2",

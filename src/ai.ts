@@ -218,25 +218,35 @@ export async function callAI(s: Settings, msgs: ChatMsg[], o: CallOpts = {}): Pr
     return await withRetry(() => callOnce(s, model, msgs, o, t), o.signal);
   } catch (e) {
     const retired = e instanceof AIError && e.status === 404;
-    const daily = isDailyQuota(e);
-    if ((!retired && !daily) || s.provider === "compatible") throw e;
-    if (daily) exhausted.add(model);
+    let quotaHit = isDailyQuota(e);
+    if ((!retired && !quotaHit) || s.provider === "compatible") throw e;
+    if (quotaHit) exhausted.add(model);
     const available = await listModels(s).catch(() => [] as string[]);
-    const candidates = retired ? [pickReplacement(s.provider, available)] : quotaAlternatives(s.provider, available, model);
+    // A retired model gets a permanent successor; then every other usable model is tried in turn,
+    // because the successor may itself be out of today's free quota.
+    const successor = retired ? pickReplacement(s.provider, available) : undefined;
+    if (successor && successor !== model) {
+      modelOverride[configured] = successor;
+      switchListener?.(s.provider, model, successor, "retired");
+    }
+    const candidates = [...new Set([successor, ...quotaAlternatives(s.provider, available, model)])];
     for (const alt of candidates) {
       if (!alt || alt === model || exhausted.has(alt)) continue;
       try {
         const out = await withRetry(() => callOnce(s, alt, msgs, o, t), o.signal);
-        modelOverride[configured] = alt;
-        switchListener?.(s.provider, model, alt, daily ? "quota" : "retired");
+        if (alt !== successor) {
+          modelOverride[configured] = alt;
+          if (successor) modelOverride[successor] = alt;
+          switchListener?.(s.provider, successor ?? model, alt, "quota");
+        }
         return out;
       } catch (e2) {
-        if (isDailyQuota(e2)) { exhausted.add(alt); continue; }
+        if (isDailyQuota(e2)) { exhausted.add(alt); quotaHit = true; continue; }
         if (e2 instanceof AIError && [404, 500, 503].includes(e2.status)) continue;
         throw e2;
       }
     }
-    if (daily) throw new Error("Đã hết lượt AI miễn phí hôm nay của các model Gemini dùng được với key này. Lượt sẽ được cấp lại vào ngày mai — trong lúc chờ, bạn có thể dùng tab “🌐 AI bên ngoài” (ChatGPT/Gemini bản web) để học tiếp ngay.");
+    if (quotaHit) throw new Error("Đã hết lượt AI miễn phí hôm nay của các model Gemini dùng được với key này (giới hạn tính theo project Google, tạo key mới trong cùng project không giúp được). Lượt sẽ được cấp lại vào ngày mai — trong lúc chờ, bạn có thể dùng tab “🌐 AI bên ngoài” (ChatGPT/Gemini bản web) để học tiếp ngay.");
     throw e;
   }
 }

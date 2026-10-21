@@ -12,9 +12,14 @@ const SETTINGS_KEY = "quizforge-settings-v1";
 export const DECK_COLORS = ["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#ec4899", "#8b5cf6", "#14b8a6"];
 export const DECK_EMOJIS = ["📘", "📗", "📙", "📕", "🧠", "🧪", "💼", "⚖️", "💻", "🌏", "📐", "🩺", "🎯", "🗣️"];
 
+const RETIRED_DEFAULTS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash-lite"];
+
 function loadSettings(): Settings {
   try {
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") };
+    const saved = { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") };
+    // Older versions defaulted to models Google has since retired for new users.
+    if (RETIRED_DEFAULTS.includes(saved.geminiModel)) saved.geminiModel = DEFAULT_SETTINGS.geminiModel;
+    return saved;
   } catch {
     return DEFAULT_SETTINGS;
   }

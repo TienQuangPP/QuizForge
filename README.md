@@ -9,7 +9,7 @@
 Tải lên PDF, Word, PowerPoint hay ảnh chụp đề. AI lập **lộ trình học**, soạn **lý thuyết**, ra **bài tập tư duy** và câu hỏi có lời giải.<br>
 Học để **hiểu** chứ không học vẹt — luyện như chơi game, nhớ lâu nhờ lịch ôn thông minh. Dùng được cho **mọi môn**.
 
-[![Version](https://img.shields.io/badge/version-1.4.0-6366f1?style=for-the-badge)](https://github.com/TienQuangPP/QuizForge/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.4.1-6366f1?style=for-the-badge)](https://github.com/TienQuangPP/QuizForge/releases/latest)
 [![Windows](https://img.shields.io/badge/Windows-portable-0ea5e9?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/TienQuangPP/QuizForge/releases/latest)
 [![Gemini](https://img.shields.io/badge/Gemini-supported-8b5cf6?style=for-the-badge&logo=googlegemini&logoColor=white)](#-kết-nối-ai)
 [![ChatGPT](https://img.shields.io/badge/ChatGPT-supported-10b981?style=for-the-badge&logo=openai&logoColor=white)](#-kết-nối-ai)
