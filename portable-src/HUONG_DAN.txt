@@ -1,0 +1,17 @@
+QUIZFORGE — Bien moi giao trinh thanh trac nghiem
+=================================================
+
+CACH MO
+1. Giai nen TOAN BO file ZIP vao mot thu muc (vi du Documents\QuizForge).
+2. Nhap dup START_QuizForge.bat -> trinh duyet tu mo http://127.0.0.1:3105
+3. Giu cua so den mo trong luc hoc. Dong cua so do (hoac STOP_QuizForge.bat) de tat.
+
+KET NOI AI (tuy chon, de AI tao cau hoi / giai thich / gia su)
+- Vao Cai dat -> chon Google Gemini (co goi mien phi: https://aistudio.google.com/apikey)
+  hoac OpenAI ChatGPT (https://platform.openai.com/api-keys), dan API key, bam "Kiem tra ket noi".
+- Ho tro them OpenRouter, Groq, DeepSeek, Ollama/LM Studio (API tuong thich OpenAI).
+
+DU LIEU
+- Bo de, tai lieu va tien do luu trong trinh duyet tren may nay (khong gui len may chu).
+- Dung Cai dat -> "Sao luu toan bo" de chuyen may / phong khi xoa du lieu trinh duyet.
+- Luon mo bang cung trinh duyet va cung dia chi 127.0.0.1:3105 de thay du lieu cu.

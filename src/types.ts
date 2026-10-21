@@ -1,0 +1,110 @@
+export type Difficulty = "easy" | "medium" | "hard";
+
+export interface Deck {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  color: string;
+  tags: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Question {
+  id: string;
+  deckId: string;
+  question: string;
+  options: string[];
+  /** indices of correct options (more than one = multiple-answer question) */
+  answers: number[];
+  explanation?: string;
+  topic?: string;
+  difficulty?: Difficulty;
+  source?: string;
+  image?: string;
+  createdAt: number;
+}
+
+export interface SourceDoc {
+  id: string;
+  deckId: string;
+  name: string;
+  kind: string;
+  text: string;
+  size: number;
+  createdAt: number;
+}
+
+export interface Progress {
+  qid: string;
+  attempts: number;
+  correct: number;
+  wrong: number;
+  streak: number;
+  ease: number;
+  interval: number;
+  due: number;
+  lastAt: number;
+  lastCorrect: boolean;
+  flagged?: boolean;
+  note?: string;
+}
+
+export type PracticeMode = "practice" | "exam" | "flash";
+
+export interface Session {
+  id: string;
+  deckIds: string[];
+  mode: PracticeMode;
+  total: number;
+  correct: number;
+  durationSec: number;
+  at: number;
+  wrongIds: string[];
+}
+
+export type AIProvider = "openai" | "gemini" | "compatible";
+
+export interface Settings {
+  provider: AIProvider;
+  openaiKey: string;
+  openaiModel: string;
+  geminiKey: string;
+  geminiModel: string;
+  compatBaseUrl: string;
+  compatKey: string;
+  compatModel: string;
+  temperature: number;
+  theme: "light" | "dark" | "system";
+  dailyGoal: number;
+  examSecondsPerQuestion: number;
+  showExplanationAlways: boolean;
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  provider: "gemini",
+  openaiKey: "",
+  openaiModel: "gpt-4.1-mini",
+  geminiKey: "",
+  geminiModel: "gemini-2.5-flash",
+  compatBaseUrl: "https://openrouter.ai/api/v1",
+  compatKey: "",
+  compatModel: "",
+  temperature: 0.4,
+  theme: "system",
+  dailyGoal: 30,
+  examSecondsPerQuestion: 60,
+  showExplanationAlways: true,
+};
+
+export interface DraftQuestion {
+  question: string;
+  options: string[];
+  answers: number[];
+  explanation?: string;
+  topic?: string;
+  difficulty?: Difficulty;
+  source?: string;
+  image?: string;
+}
