@@ -54,7 +54,7 @@ export default function App() {
       case "library": return <Library />;
       case "deck": return <DeckPage id={arg} tab={route[2]} sub={route[3]} />;
       case "studio": return <Studio deckId={arg} docId={route[2]} />;
-      case "import": return <ImportPage deckId={arg} />;
+      case "import": return <ImportPage key={(arg ?? "") + "/" + (route[2] ?? "")} deckId={arg} mode={route[2]} />;
       case "practice": return <PracticeSetup deckId={arg} preset={route[2]} />;
       case "play": return <Player />;
       case "tutor": return <Tutor deckId={arg} />;

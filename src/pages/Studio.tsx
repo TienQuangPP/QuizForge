@@ -45,7 +45,8 @@ export function DraftReview({ drafts, setDrafts, picked, setPicked }: {
               {q.topic && <span className="pill">{q.topic}</span>}
               <DiffBadge d={q.difficulty} />
               {q.source && <span className="muted">{q.source}</span>}
-              {!q.answers.length && <span className="pill bad">Chưa có đáp án</span>}
+              {!q.answers.length && <span className="pill bad">⚠️ Chưa có đáp án — bấm ✎ để chọn</span>}
+              {q.options.length > 2 && q.answers.length === q.options.length && <span className="pill bad">⚠️ Tất cả phương án đều đúng?</span>}
             </div>
           </div>
           <button className="icon-btn" title="Sửa" onClick={() => { setEdit(i); setTmp({ ...q }); }}>✎</button>
@@ -179,7 +180,7 @@ export default function Studio({ deckId, docId }: { deckId?: string; docId?: str
       </div>
       {!ready && (
         <div className="callout warn">
-          Cần API key để dùng AI. <a href="#/settings">Mở Cài đặt → AI</a> và nhập key ChatGPT (OpenAI) hoặc Gemini.
+          Cần API key để dùng AI tại đây. <a href="#/settings">Mở Cài đặt → AI</a> để nhập key — hoặc <a href="#/import/__/external">🌐 dùng ChatGPT/Gemini/Claude bản web miễn phí</a> (không cần key).
         </div>
       )}
 

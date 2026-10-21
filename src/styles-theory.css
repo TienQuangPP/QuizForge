@@ -46,3 +46,11 @@ textarea.mono { font-family: ui-monospace, Consolas, monospace; font-size: 0.88r
 .logo-img { width: 40px; height: 40px; border-radius: 11px; box-shadow: 0 4px 14px rgba(91, 91, 240, 0.35); }
 .studio > .card:first-child > * { flex-shrink: 0; }
 .chart { justify-content: center; } .chart .col { max-width: 64px; }
+/* ---------- v1.3: external AI ---------- */
+.step { display: flex; align-items: center; gap: 10px; margin: 10px 0 0; font-size: 1rem; }
+.step span { width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-size: 0.85rem; flex-shrink: 0; }
+.ai-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.ai-links .btn:hover { text-decoration: none; }
+.prompt-view { max-height: 280px; font-size: 0.78rem; }
+.seg.wrap button:disabled { opacity: 0.45; cursor: not-allowed; }
+.ext .draft input:not([type]) { font-weight: 600; }

@@ -251,7 +251,8 @@ export default function TheoryTab({ deckId, noteId }: { deckId: string; noteId?:
           <p className="muted">Học lý thuyết trước khi làm bài giúp hiểu sâu và nhớ lâu hơn. AI có thể đọc giáo trình và soạn sẵn cho bạn theo từng chủ đề.</p>
           <div className="row gap center wrap">
             <button className="btn primary" onClick={() => setGenOpen(true)}>✨ AI soạn sổ tay lý thuyết</button>
-            <button className="btn" onClick={() => setAddOpen(true)}>✎ Tự viết một chủ đề</button>
+            <button className="btn" onClick={() => go(`import/${deckId}/external-theory`)}>🌐 Dùng ChatGPT/Gemini web (không cần key)</button>
+            <button className="btn ghost" onClick={() => setAddOpen(true)}>✎ Tự viết một chủ đề</button>
           </div>
         </Empty>
         {genModal}
@@ -266,6 +267,7 @@ export default function TheoryTab({ deckId, noteId }: { deckId: string; noteId?:
         <input className="search" placeholder="🔍 Tìm trong lý thuyết…" value={search} onChange={(e) => setSearch(e.target.value)} />
         <button className="btn" onClick={() => setAddOpen(true)}>＋ Chủ đề</button>
         <button className="btn" onClick={() => setGenOpen(true)}>✨ AI soạn thêm</button>
+        <button className="btn" onClick={() => go(`import/${deckId}/external-theory`)} title="Nhờ ChatGPT/Gemini/Claude bản web soạn rồi dán về">🌐 AI bên ngoài</button>
         <button className="btn ghost" onClick={() => printHandbook(deck.name, notes)}>🖨 In sổ tay</button>
       </div>
       <div className="theory-progress">

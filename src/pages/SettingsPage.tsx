@@ -253,7 +253,7 @@ export default function SettingsPage() {
           {store.decks.length} bộ đề · {store.questions.length} câu hỏi · {store.docs.length} tài liệu · {store.sessions.length} lượt làm bài
         </div>
       </div>
-      <p className="muted small center">QuizForge v1.2.2 · chạy trên máy bạn · AI chỉ dùng khi bạn bấm</p>
+      <p className="muted small center">QuizForge v1.3 · chạy trên máy bạn · AI chỉ dùng khi bạn bấm</p>
     </div>
   );
 }

@@ -9,10 +9,11 @@
 Tải lên PDF, Word, PowerPoint hay ảnh chụp đề. AI soạn câu hỏi có đáp án, lời giải và sổ tay lý thuyết.<br>
 Luyện tập như chơi game, nhớ lâu nhờ lịch ôn thông minh.
 
-[![Version](https://img.shields.io/badge/version-1.2.2-6366f1?style=for-the-badge)](https://github.com/TienQuangPP/QuizForge/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.3.0-6366f1?style=for-the-badge)](https://github.com/TienQuangPP/QuizForge/releases/latest)
 [![Windows](https://img.shields.io/badge/Windows-portable-0ea5e9?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/TienQuangPP/QuizForge/releases/latest)
 [![Gemini](https://img.shields.io/badge/Gemini-supported-8b5cf6?style=for-the-badge&logo=googlegemini&logoColor=white)](#-kết-nối-ai)
 [![ChatGPT](https://img.shields.io/badge/ChatGPT-supported-10b981?style=for-the-badge&logo=openai&logoColor=white)](#-kết-nối-ai)
+[![No key needed](https://img.shields.io/badge/ChatGPT_web-no_API_key-ec4899?style=for-the-badge)](#-không-có-api-key-dùng-ai-bên-ngoài)
 [![Offline](https://img.shields.io/badge/data-100%25_local-f59e0b?style=for-the-badge)](#-quyền-riêng-tư)
 
 **[⬇️ Tải bản mới nhất](https://github.com/TienQuangPP/QuizForge/releases/latest)** &nbsp;·&nbsp;
@@ -47,6 +48,29 @@ Luyện tập như chơi game, nhớ lâu nhờ lịch ôn thông minh.
 **XP, cấp độ, 23 huy hiệu**, combo 🔥, đua tốc độ ⚡, sinh tồn ❤️ và thử thách mỗi ngày. Khó mà bỏ học giữa chừng.
 
 </td>
+</tr>
+</table>
+
+---
+
+## 🌐 Không có API key? Dùng AI bên ngoài
+
+Bạn đang dùng **ChatGPT, Gemini, Claude hay Copilot** bản web (miễn phí hoặc gói Plus)? QuizForge soạn sẵn câu lệnh, bạn chỉ việc **copy → gửi cho AI → dán kết quả về**:
+
+<table>
+<tr>
+<td width="45%" valign="top">
+
+1. **Chọn yêu cầu:** số câu, độ khó, ngôn ngữ, dạng câu, hoặc **sổ tay lý thuyết**.
+2. **📋 Sao chép câu lệnh** → bấm **Mở ChatGPT / Gemini / Claude** → đính kèm giáo trình → gửi.
+3. **Dán câu trả lời** về QuizForge → xem lại → lưu.
+
+✅ Nhận được JSON, Markdown in đậm, gạch đầu dòng, bảng đáp án dồn cuối (`1-B, 2-C`), `✅ Answer: …`<br>
+⚠️ Câu thiếu đáp án hoặc nghi sai được **tô đỏ** và hỏi lại trước khi lưu<br>
+🔁 AI dừng giữa chừng? Gõ "tiếp tục" rồi dán thêm, câu trùng tự loại
+
+</td>
+<td width="55%"><img src="docs/screenshots/external.png" alt="Dùng AI bên ngoài"></td>
 </tr>
 </table>
 
@@ -88,6 +112,7 @@ Luyện tập như chơi game, nhớ lâu nhờ lịch ôn thông minh.
 - **9 dạng câu hỏi:** định nghĩa, hiểu bản chất, vận dụng tình huống, so sánh, NOT/EXCEPT, All/None of the above, nhiều đáp án đúng, Đúng/Sai, số liệu.
 - **Không cần tài liệu:** nhập một chủ đề như *"Chiến tranh thế giới thứ 2"*, AI tự soạn rồi ra đề.
 - **Duyệt trước khi lưu:** xem, sửa, bỏ chọn từng câu. Câu trùng được tự loại bỏ.
+- **Không cần API key:** dùng ChatGPT/Gemini/Claude bản web qua câu lệnh soạn sẵn ([xem trên](#-không-có-api-key-dùng-ai-bên-ngoài)).
 - **Đọc ảnh chụp đề:** chụp màn hình rồi Ctrl+V. AI nhận câu hỏi và tự giải nếu đề chưa có đáp án.
 
 </details>
@@ -134,6 +159,7 @@ Thêm **🧠 chế độ chọn câu thông minh** (ưu tiên câu yếu), **�
 | Excel / CSV | Cột `question, A, B, C, D, answer, explanation, topic` |
 | Word / PDF / TXT | Dạng `Câu 1: … A. … B. … Đáp án: B` hoặc đánh dấu `*` trước đáp án đúng |
 | JSON | File xuất từ QuizForge, mảng `{question, options, answer}` |
+| Kết quả copy từ ChatGPT / Gemini / Claude | Dán thẳng, tự bỏ định dạng Markdown, hiểu bảng đáp án dồn cuối |
 | Ảnh / văn bản lộn xộn | Để AI đọc và chuẩn hoá |
 
 </details>
@@ -191,7 +217,7 @@ Vào **⚙️ Cài đặt → Kết nối AI**, dán key. App tự kiểm tra k�
 <details>
 <summary>Không có API key thì dùng được không?</summary>
 
-Được. Bạn vẫn nhập câu hỏi từ Excel/Word, luyện tập, thi thử, thẻ nhớ và chơi game bình thường. AI chỉ cần cho việc tự soạn đề, soạn lý thuyết và giảng giải.
+Được. Bạn vẫn nhập câu hỏi từ Excel/Word, luyện tập, thi thử, thẻ nhớ và chơi game bình thường. Muốn AI soạn đề hay lý thuyết thì dùng tab **🌐 AI bên ngoài**: copy câu lệnh sang ChatGPT/Gemini bản web rồi dán kết quả về, không cần key.
 </details>
 
 <details>
@@ -239,6 +265,7 @@ src/
 
 | Phiên bản | Điểm nổi bật |
 |---|---|
+| **1.3** | 🌐 Dùng ChatGPT/Gemini/Claude web không cần key, nhận dạng câu hỏi dán vào chính xác hơn, cảnh báo câu thiếu đáp án |
 | **1.2** | 📖 Sổ tay lý thuyết, ôn lý thuyết khi làm sai, lưu lời giảng AI |
 | **1.1** | 🎮 Game hoá, ⚡ Đua tốc độ, ❤️ Sinh tồn, 👵 cỡ chữ lớn, đọc to, tự lưu bài |
 | **1.0** | ✨ AI tạo đề từ tài liệu, nhập đề, 3 chế độ luyện, gia sư AI |

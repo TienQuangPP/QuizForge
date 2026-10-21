@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "../store";
 import type { DraftQuestion } from "../types";
 import { aiReady, extractQuestionsAI } from "../ai";
-import { compressImage, download, extractText, fileToQuestions, isImage, parseQuestionText, questionsToCSV } from "../parsers";
+import { compressImage, download, extractText, fileToQuestions, isImage, parsePasted, parseQuestionText, questionsToCSV } from "../parsers";
 import { go, Spinner } from "../ui";
 import { DraftReview } from "./Studio";
+import ExternalAI from "./ExternalAI";
 
 const SAMPLE_TEXT = `Câu 1: Thủ đô của Việt Nam là?
 A. Hà Nội
@@ -21,12 +22,12 @@ B. 4
 D. 9
 Đáp án: A, C`;
 
-export default function ImportPage({ deckId }: { deckId?: string }) {
+export default function ImportPage({ deckId, mode }: { deckId?: string; mode?: string }) {
   const store = useStore();
   const ready = aiReady(store.settings);
   const [target, setTarget] = useState(deckId && store.decks.some((d) => d.id === deckId) ? deckId : store.decks[0]?.id ?? "__new");
   const [newName, setNewName] = useState("");
-  const [tab, setTab] = useState<"file" | "paste" | "ai">("file");
+  const [tab, setTab] = useState<"file" | "paste" | "ai" | "external">(mode?.startsWith("external") ? "external" : "file");
   const [text, setText] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [solve, setSolve] = useState(true);
@@ -91,8 +92,15 @@ export default function ImportPage({ deckId }: { deckId?: string }) {
     setBusy("");
   };
 
+  const ensureDeck = async () => {
+    if (target !== "__new") return target;
+    const d = await store.createDeck({ name: newName.trim() || "Bộ đề nhập " + new Date().toLocaleDateString("vi-VN") });
+    setTarget(d.id);
+    return d.id;
+  };
+
   const parsePaste = () => {
-    const qs = parseQuestionText(text);
+    const qs = parsePasted(text);
     if (!qs.length) return setError("Không nhận dạng được câu hỏi nào. Kiểm tra định dạng mẫu bên dưới hoặc dùng AI.");
     setError("");
     setResult(qs);
@@ -127,9 +135,17 @@ export default function ImportPage({ deckId }: { deckId?: string }) {
   };
 
   const save = async () => {
-    let id = target;
-    if (target === "__new") id = (await store.createDeck({ name: newName.trim() || "Bộ đề nhập " + new Date().toLocaleDateString("vi-VN") })).id;
     const chosen = drafts.filter((_, i) => picked.has(i));
+    const missing = chosen.filter((q) => !q.answers.length).length;
+    const allMarked = chosen.filter((q) => q.options.length > 2 && q.answers.length === q.options.length).length;
+    if (missing || allMarked) {
+      const lines = [
+        missing ? `• ${missing} câu CHƯA CÓ đáp án (sẽ tạm đặt là A)` : "",
+        allMarked ? `• ${allMarked} câu bị đánh dấu TẤT CẢ phương án đều đúng` : "",
+      ].filter(Boolean).join("\n");
+      if (!confirm(`Cảnh báo:\n${lines}\n\nNên bấm ✎ để sửa các câu được tô đỏ trước. Vẫn lưu?`)) return;
+    }
+    const id = await ensureDeck();
     const n = await store.addQuestions(id, chosen);
     store.toast(`Đã lưu ${n} câu${chosen.length - n ? `, bỏ ${chosen.length - n} câu trùng/thiếu` : ""}`);
     go("deck/" + id);
@@ -140,7 +156,7 @@ export default function ImportPage({ deckId }: { deckId?: string }) {
       <div className="page-head">
         <div>
           <h1>📥 Nhập câu hỏi</h1>
-          <p className="muted">Đưa bất kỳ bộ câu hỏi nào vào: file Excel/CSV/JSON/Word/PDF/TXT, văn bản dán, hoặc ảnh chụp đề thi (AI đọc).</p>
+          <p className="muted">Đưa bất kỳ bộ câu hỏi nào vào: file Excel/CSV/JSON/Word/PDF/TXT, văn bản dán, ảnh chụp đề — hoặc nhờ ChatGPT/Gemini/Claude bản web soạn rồi dán về.</p>
         </div>
       </div>
       <div className="studio">
@@ -156,6 +172,7 @@ export default function ImportPage({ deckId }: { deckId?: string }) {
             <button className={tab === "file" ? "on" : ""} onClick={() => setTab("file")}>📁 File</button>
             <button className={tab === "paste" ? "on" : ""} onClick={() => setTab("paste")}>📋 Dán văn bản</button>
             <button className={tab === "ai" ? "on" : ""} onClick={() => setTab("ai")}>🤖 AI đọc ảnh / văn bản lộn xộn</button>
+            <button className={tab === "external" ? "on" : ""} onClick={() => setTab("external")}>🌐 AI bên ngoài (không cần key)</button>
           </div>
 
           {tab === "file" && (
@@ -185,7 +202,7 @@ export default function ImportPage({ deckId }: { deckId?: string }) {
 
           {tab === "paste" && (
             <>
-              <textarea rows={14} value={text} onChange={(e) => setText(e.target.value)} placeholder={SAMPLE_TEXT} />
+              <textarea rows={14} value={text} onChange={(e) => setText(e.target.value)} placeholder={"Dán câu hỏi vào đây — copy từ ChatGPT/Gemini/Claude, Word, web… đều được (kể cả JSON).\n\n" + SAMPLE_TEXT} />
               <div className="row gap">
                 <button className="btn primary" disabled={!text.trim()} onClick={parsePaste}>Nhận dạng câu hỏi</button>
                 {ready && <button className="btn" disabled={!text.trim()} onClick={() => { setTab("ai"); }}>Dùng AI thay thế →</button>}
@@ -225,6 +242,7 @@ export default function ImportPage({ deckId }: { deckId?: string }) {
               )}
             </>
           )}
+          {tab === "external" && <ExternalAI target={target} ensureDeck={ensureDeck} onQuestions={setResult} initialKind={mode === "external-theory" ? "theory" : "questions"} />}
           {busy && tab !== "ai" && <div className="muted"><Spinner /> {busy}</div>}
           {error && <div className="callout bad">{error}</div>}
         </div>
@@ -232,6 +250,7 @@ export default function ImportPage({ deckId }: { deckId?: string }) {
         <div className="card stack">
           <div className="row between">
             <h3>Xem trước {drafts.length > 0 && `(${picked.size}/${drafts.length})`}</h3>
+            {drafts.some((q) => !q.answers.length) && <span className="pill bad">⚠️ {drafts.filter((q) => !q.answers.length).length} câu thiếu đáp án</span>}
             {drafts.length > 0 && (
               <div className="row gap">
                 <button className="btn sm ghost" onClick={() => { setDrafts([]); setPicked(new Set()); }}>Xoá</button>

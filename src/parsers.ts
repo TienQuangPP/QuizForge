@@ -163,23 +163,63 @@ function parseDifficulty(s?: string): Difficulty | undefined {
   return undefined;
 }
 
-const RE_QSTART = /^\s*(?:câu(?:\s*hỏi)?|cau|question|q|bài)\s*(\d+)\s*[.:)\-–]?\s*(.*)$/i;
-const RE_NUMSTART = /^\s*(\d{1,4})\s*[.)]\s+(.+)$/;
-const RE_OPT = /^\s*(\*|✓|✔)?\s*\(?([A-Ha-h])\s*[.):\]]\s*(.*?)\s*(\*|✓|✔|\(đúng\)|\(correct\))?\s*$/i;
-const RE_ANS = /^\s*(?:đáp\s*án(?:\s*đúng)?|dap\s*an|answers?|ans|correct(?:\s*answer)?|key|đ\/a|da)\s*[:：=\-–]?\s*(.+)$/i;
-const RE_EXP = /^\s*(?:giải\s*thích|giai\s*thich|explanation|explain|lời\s*giải|rationale)\s*[:：\-–]?\s*(.*)$/i;
-const RE_TOPIC = /^\s*(?:chủ\s*đề|topic|chương|chapter)\s*[:：]\s*(.*)$/i;
+const RE_QSTART = /^(?:câu(?:\s*hỏi)?|cau|question|q|bài)\s*(\d+)\s*[.:)\-–]?\s*(.*)$/i;
+const RE_NUMSTART = /^(\d{1,4})\s*[.)]\s+(.+)$/;
+// "*" directly before the letter (no space) marks the correct option; "* A." with a space is just a Markdown bullet.
+const RE_OPT = /^(\*(?=\(?[A-Ha-h])|✓|✔|✅)?\s*\(?([A-Ha-h])\s*[.):\]\-–]\s*(.*?)\s*(\*|✓|✔|✅|\(đúng\)|\(correct\))?\s*$/i;
+const RE_ANS = /^(?:đáp\s*án(?:\s*(?:đúng|chính xác))?|dap\s*an|answers?|ans|correct(?:\s*answer)?|key|đ\/a|da)\s*[:：=\-–]?\s*(.+)$/i;
+const RE_EXP = /^(?:giải\s*thích|giai\s*thich|explanation|explain|lời\s*giải|rationale)\s*[:：\-–]?\s*(.*)$/i;
+const RE_TOPIC = /^(?:chủ\s*đề|topic|chương|chapter)\s*[:：]\s*(.*)$/i;
+const RE_KEY_HEADING = /^(?:bảng\s*)?(?:đáp\s*án(?:\s*(?:đúng|tham khảo))?|answer\s*key|answers|key)\s*[:：]?$/i;
+// "1-B", "1. B", "1) A,C", "| 1 | B |", "1B" — the letter must not be the start of a word.
+const RE_KEY_PAIR = /(\d{1,3})\s*[.\-:)\]=|]?\s*\|?\s*([A-Ha-h](?:\s*[,&/]\s*[A-Ha-h])*)(?![\p{L}\p{N}])/gu;
 
-/** Parses "Câu 1: … A. … B. … Đáp án: B Giải thích: …" style text. */
+/** Removes Markdown/chat formatting so AI chat answers parse like plain text. */
+function cleanLine(raw: string): string {
+  let l = raw.trim();
+  l = l.replace(/^#{1,6}\s*/, "").replace(/^>\s?/, "");
+  l = l.replace(/^[-•+]\s+/, "").replace(/^\*\s+(?=\S)/, "");
+  l = l.replace(/\*\*|__/g, "");
+  // Leading emoji: keep ✓/✅ only when it marks an option ("✅ B. …"); drop it before "✅ Đáp án: …".
+  const em = l.match(/^[\p{Extended_Pictographic}️‍]+\s*/u);
+  if (em && !(/[✓✔✅]/.test(em[0]) && /^\(?[A-Ha-h]\s*[.):\]\-–]\s/.test(l.slice(em[0].length)))) l = l.slice(em[0].length);
+  return l.trim();
+}
+
+function keyPairs(s: string): [number, string][] {
+  return [...s.matchAll(RE_KEY_PAIR)].map((m) => [+m[1], m[2]] as [number, string]);
+}
+
+/** Reads an answer like "B", "A, C", "B. Lục lạp" or the option text itself. */
+export function parseAnswerRaw(raw: string, options: string[]): number[] {
+  const r = raw.trim().replace(/^[\s:：\-–]+/, "");
+  const lead = r.match(/^\(?([A-Ja-j])\)?(?![\p{L}])((?:\s*(?:,|;|&|\/|và|and)\s*\(?[A-Ja-j]\)?(?![\p{L}]))*)/u);
+  if (lead) {
+    const letters = (lead[1] + lead[2]).toUpperCase().match(/[A-J]/g) ?? [];
+    const idx = [...new Set(letters.map((c) => c.charCodeAt(0) - 65))].filter((i) => i < options.length);
+    if (idx.length) return idx.sort((a, b) => a - b);
+  }
+  const norm = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const nr = norm(r);
+  const hit = options.findIndex((o) => norm(o) && (norm(o) === nr || nr.startsWith(norm(o)) || norm(o).startsWith(nr)));
+  return hit >= 0 ? [hit] : [];
+}
+
+/** Parses "Câu 1: … A. … B. … Đáp án: B Giải thích: …" style text, including AI chat output. */
 export function parseQuestionText(text: string): DraftQuestion[] {
-  const out: DraftQuestion[] = [];
-  type Cur = DraftQuestion & { _exp?: boolean; _ansRaw?: string };
+  const out: (DraftQuestion & { _num?: number })[] = [];
+  type Cur = DraftQuestion & { _exp?: boolean; _ansRaw?: string; _num?: number };
   let cur = null as Cur | null;
   let topic: string | undefined;
+  let inKey = false;
+  const key = new Map<number, string>();
 
   const flush = () => {
     if (!cur) return;
-    if (cur._ansRaw) cur.answers = lettersToIdx(cur._ansRaw, cur.options.length);
+    if (cur._ansRaw) {
+      const parsed = parseAnswerRaw(cur._ansRaw, cur.options);
+      if (parsed.length) cur.answers = parsed;
+    }
     cur.question = cur.question.trim();
     cur.explanation = cur.explanation?.trim() || undefined;
     if (cur.question && cur.options.length >= 2) {
@@ -189,24 +229,35 @@ export function parseQuestionText(text: string): DraftQuestion[] {
     }
     cur = null;
   };
-  const start = (q: string) => {
+  const start = (q: string, num?: number) => {
     flush();
-    cur = { question: q, options: [], answers: [], topic };
+    cur = { question: q, options: [], answers: [], topic, _num: num ?? out.length + 1 };
   };
 
   for (const raw of text.replace(/\r/g, "").split("\n")) {
-    const line = raw.trim();
-    if (!line) continue;
+    const line = cleanLine(raw);
+    if (!line || /^[-=_*|:\s]{3,}$/.test(line)) continue;
     let m: RegExpMatchArray | null;
+    if (RE_KEY_HEADING.test(line)) { flush(); inKey = true; continue; }
+    if (inKey) {
+      const pairs = keyPairs(line);
+      if (pairs.length) { pairs.forEach(([n, l]) => key.set(n, l)); continue; }
+      if (!RE_QSTART.test(line)) continue;
+      inKey = false;
+    }
     if ((m = line.match(RE_TOPIC)) && (!cur || cur.options.length === 0 || cur.answers.length || cur._ansRaw)) {
       flush();
       topic = m[1].trim();
       continue;
     }
-    if ((m = line.match(RE_QSTART))) { start(m[2]); continue; }
-    if (cur && (m = line.match(RE_ANS)) && cur.options.length) { cur._ansRaw = m[1]; cur._exp = false; continue; }
+    if ((m = line.match(RE_QSTART))) { start(m[2], +m[1]); continue; }
+    if ((m = line.match(RE_ANS))) {
+      const pairs = keyPairs(m[1]);
+      if (pairs.length >= 2) { flush(); pairs.forEach(([n, l]) => key.set(n, l)); continue; }
+      if (cur && cur.options.length) { cur._ansRaw = m[1]; cur._exp = false; continue; }
+    }
     if (cur && (m = line.match(RE_EXP))) { cur.explanation = m[1]; cur._exp = true; continue; }
-    if ((m = line.match(RE_NUMSTART)) && (!cur || cur.options.length >= 2)) { start(m[2]); continue; }
+    if ((m = line.match(RE_NUMSTART)) && (!cur || cur.options.length >= 2)) { start(m[2], +m[1]); continue; }
     if (cur && !cur._exp && (m = line.match(RE_OPT))) {
       const idx = m[2].toUpperCase().charCodeAt(0) - 65;
       if (idx === cur.options.length) {
@@ -221,7 +272,50 @@ export function parseQuestionText(text: string): DraftQuestion[] {
     else if (!cur._ansRaw) cur.options[cur.options.length - 1] += " " + line;
   }
   flush();
-  return out;
+  // Apply an answer key given separately ("Đáp án: 1-B, 2-C" or a key table at the end).
+  if (key.size) {
+    out.forEach((q, i) => {
+      const k = key.get(q._num ?? i + 1) ?? key.get(i + 1);
+      if (k && !q.answers.length) q.answers = parseAnswerRaw(k, q.options);
+    });
+  }
+  return out.map(({ _num, ...q }) => { void _num; return q; });
+}
+
+/** Paste box entry point: accepts JSON (optionally inside ```json fences or prose) or plain text. */
+export function parsePasted(text: string): DraftQuestion[] {
+  const t = text.trim();
+  const candidates: string[] = [];
+  for (const m of t.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)) candidates.push(m[1].trim());
+  candidates.push(t);
+  const a = t.search(/[[{]/);
+  if (a > 0) candidates.push(t.slice(a, Math.max(t.lastIndexOf("]"), t.lastIndexOf("}")) + 1));
+  for (const c of candidates) {
+    if (!/^[[{]/.test(c)) continue;
+    try {
+      const qs = jsonToQuestions(JSON.parse(c));
+      if (qs.length) return qs;
+    } catch { /* not JSON, try next */ }
+  }
+  const fenced = [...t.matchAll(/```(?:\w+)?\s*([\s\S]*?)```/g)].map((m) => m[1]).join("\n\n");
+  const fromText = parseQuestionText(t);
+  return fromText.length || !fenced ? fromText : parseQuestionText(fenced);
+}
+
+/** Splits a Markdown handbook ("## Topic" sections) into theory notes. */
+export function parseTheoryMarkdown(text: string): { title: string; summary?: string; content: string }[] {
+  const t = text.replace(/\r/g, "").replace(/^```(?:markdown|md)?\s*$/gim, "").trim();
+  const parts = t.split(/^##\s+(?!#)/m).slice(1);
+  return parts
+    .map((p) => {
+      const lines = p.split("\n");
+      const title = lines.shift()!.replace(/\*\*/g, "").replace(/^(?:chủ\s*đề|topic)\s*\d*\s*[:：.\-–]\s*/i, "").replace(/^\d+[.)]\s*/, "").trim();
+      while (lines.length && !lines[0].trim()) lines.shift();
+      let summary: string | undefined;
+      if (lines[0]?.trim().startsWith(">")) summary = lines.shift()!.replace(/^>\s*/, "").replace(/\*\*/g, "").trim();
+      return { title, summary, content: lines.join("\n").trim() };
+    })
+    .filter((n) => n.title && n.content);
 }
 
 /** Parses a CSV line respecting quotes. Delimiter auto-detected by caller. */
@@ -308,7 +402,7 @@ export function jsonToQuestions(data: any): DraftQuestion[] {
   return list
     .map((c): DraftQuestion | null => {
       const rawOpts: any[] = c.options ?? c.choices ?? c.answers_list ?? [];
-      const options = rawOpts.map(pick);
+      const options = rawOpts.map((o) => pick(o).replace(/^\s*\(?[A-Ha-h][.)]\s+/, ""));
       if (!options.length && c.a) ["a", "b", "c", "d", "e"].forEach((k) => c[k] && options.push(String(c[k])));
       const optIds: string[] = rawOpts.map((o, i) => (typeof o === "object" && o?.id ? String(o.id) : letter(i)));
       let answers: number[] = [];
