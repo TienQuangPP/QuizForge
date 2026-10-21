@@ -301,7 +301,7 @@ export default function TheoryTab({ deckId, noteId }: { deckId: string; noteId?:
             </div>
             <div className="note-tools">
               {canSpeak() && <button className="btn sm" onClick={listen}>{speaking ? "⏹ Dừng đọc" : "🔊 Nghe đọc"}</button>}
-              <button className="btn sm" onClick={() => setEditing({ title: current.title, summary: current.summary ?? "", content: current.content })}>✎ Sửa</button>
+              <button className="btn sm" onClick={() => setEditing({ title: current.title, summary: current.summary ?? "", content: current.content })}>✎ Sửa nội dung</button>
               {ai && <button className="btn sm" disabled={!!busy} onClick={() => rewrite("detailed")}>✨ Giảng kỹ hơn</button>}
               {ai && <button className="btn sm" disabled={!!busy} onClick={() => rewrite("brief")}>✂️ Rút gọn</button>}
               <button className="icon-btn" title="Lên trên" disabled={idx === 0} onClick={() => move(-1)}>↑</button>
