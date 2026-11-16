@@ -60,7 +60,7 @@ export const discardSavedRun = () => localStorage.removeItem(RUN_KEY);
 export const MODE_INFO: Record<PracticeMode, { icon: string; title: string; desc: string }> = {
   practice: { icon: "🎯", title: "Luyện tập", desc: "Biết đúng/sai ngay, có giải thích" },
   exam: { icon: "📝", title: "Thi thử", desc: "Làm hết rồi mới chấm điểm" },
-  flash: { icon: "🃏", title: "Thẻ ghi nhớ", desc: "Lật thẻ, tự chấm mức nhớ" },
+  flash: { icon: "🃏", title: "Thẻ ghi nhớ", desc: "Chọn đáp án, xem lời giải, tự chấm mức nhớ" },
   speed: { icon: "⚡", title: "Đua tốc độ", desc: "Đúng càng nhiều càng tốt trong 60 giây" },
   survival: { icon: "❤️", title: "Sinh tồn", desc: "3 mạng — sai 3 lần là thua" },
 };
@@ -272,7 +272,7 @@ export function PracticeSetup({ deckId, preset }: { deckId?: string; preset?: st
       <button className="btn primary big" disabled={!filtered.length} onClick={begin}>
         {MODE_INFO[mode].icon} Bắt đầu {endless ? "" : `${n} câu `}→
       </button>
-      <p className="muted small center">Mẹo: bấm phím 1–4 (hoặc A–D) để chọn, Enter để sang câu, F để đánh dấu, R để nghe đọc câu hỏi.</p>
+      <p className="muted small center">Mẹo: bấm phím 1–4 (hoặc A–D) để chọn, hoặc ← → để di chuyển giữa các đáp án rồi Enter để chọn; Enter để sang câu, F để đánh dấu, R để nghe đọc câu hỏi.</p>
     </div>
   );
 }
@@ -383,6 +383,9 @@ export function Player() {
   const [prevBest] = useState(() => ({ speed: store.game.bestSpeed, survival: store.game.bestSurvival }));
   const recorded = useRef(false);
   const advanceTimer = useRef<number | undefined>(undefined);
+  /** Keyboard highlight among the answer choices (-1 = none). */
+  const [cursor, setCursor] = useState(-1);
+  useEffect(() => setCursor(-1), [idx]);
 
   useEffect(() => {
     pendingRun = null;
@@ -528,6 +531,7 @@ export function Player() {
   const choose = (disp: number) => {
     if (!item || finished || !run) return;
     if (instant && checked[idx]) return;
+    if (run.mode === "flash" && flipped) return;
     const multi = cur!.q.answers.length > 1;
     if (multi) {
       // Functional update so rapid taps never drop a selection.
@@ -538,7 +542,9 @@ export function Player() {
       return;
     }
     setAnswers((prev) => ({ ...prev, [idx]: [disp] }));
-    if (instant && !askConf) check([disp]);
+    // Flashcards: picking an answer flips the card to show right/wrong and the explanation.
+    if (run.mode === "flash") setFlipped(true);
+    else if (instant && !askConf) check([disp]);
   };
 
   const rateFlash = (quality: number) => {
@@ -563,22 +569,45 @@ export function Player() {
       const k = e.key.toLowerCase();
       if (k === "r") return readQuestion(cur!.q, cur!.order);
       if (k === "f") return void store.toggleFlag(item.id);
-      if (run.mode === "flash") {
-        if (k === " " || k === "enter") { e.preventDefault(); if (!flipped) setFlipped(true); else rateFlash(2); }
-        else if (flipped && ["1", "2", "3", "4"].includes(k)) rateFlash(+k - 1);
+      if (run.mode === "flash" && flipped) {
+        // Enter/Space rates by the picked answer: right = "Nhớ", wrong = "Quên".
+        if (k === " " || k === "enter") { e.preventDefault(); rateFlash(answers[idx]?.length && !isCorrect(idx) ? 0 : 2); }
+        else if (["1", "2", "3", "4"].includes(k)) rateFlash(+k - 1);
         return;
       }
       const n = /^[1-9]$/.test(k) ? +k - 1 : /^[a-h]$/.test(k) && k !== "f" && k !== "r" ? k.charCodeAt(0) - 97 : -1;
-      if (n >= 0 && n < cur!.order.length) choose(n);
-      else if (k === "enter") {
+      const len = cur!.order.length;
+      const locked = instant && checked[idx];
+      if (run.mode === "flash" && (k === " " || k === "enter") && (cursor < 0 || (k === "enter" && (answers[idx] ?? []).includes(cursor)))) {
+        e.preventDefault();
+        setFlipped(true);
+        return;
+      }
+      // ← → (also < > , . ↑ ↓) move the highlight between answers until the question is checked.
+      const step = ["arrowright", "arrowdown", ">", "."].includes(k) ? 1 : ["arrowleft", "arrowup", "<", ","].includes(k) ? -1 : 0;
+      if (step && !locked) {
+        e.preventDefault();
+        setCursor((c) => {
+          const from = c >= 0 ? c : (answers[idx]?.[0] ?? (step > 0 ? -1 : len));
+          return (from + step + len) % len;
+        });
+        return;
+      }
+      if (n >= 0 && n < len) { setCursor(n); choose(n); }
+      else if ((k === " " || k === "enter") && cursor >= 0 && !locked && (k === " " || !(answers[idx] ?? []).includes(cursor))) {
+        // Enter/Space picks the highlighted answer (Space toggles it on multi-answer questions).
+        e.preventDefault();
+        choose(cursor);
+      } else if (k === "enter") {
         e.preventDefault();
         if (instant) checked[idx] ? next() : check(undefined, askConf ? 1 : undefined);
         else if (run.mode === "exam" && idx === items.length - 1) submitExam();
         else next();
-      } else if (k === "arrowright" && run.mode === "exam") {
+      } else if (k === "pagedown" && run.mode === "exam") {
+        e.preventDefault();
         if (idx < items.length - 1) next();
-      } else if (k === "arrowright" && checked[idx]) next();
-      else if (k === "arrowleft" && idx > 0 && !auto) setIdx(idx - 1);
+      } else if ((k === "arrowright" || k === "pagedown") && checked[idx]) { e.preventDefault(); next(); }
+      else if ((k === "arrowleft" || k === "pageup") && idx > 0 && !auto) { e.preventDefault(); setIdx(idx - 1); }
     };
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
@@ -633,7 +662,7 @@ export function Player() {
 
       <div className="player-body">
         {combo >= 3 && instant && <div className="combo" key={combo}>🔥 Combo x{combo}</div>}
-        <div className={"qcard" + (run.mode === "flash" ? " flash" + (flipped ? " flipped" : "") : "")} onClick={() => run.mode === "flash" && !flipped && setFlipped(true)}>
+        <div className={"qcard" + (run.mode === "flash" ? " flash" + (flipped ? " flipped" : "") : "")}>
           {pop && <span className="xp-pop" key={pop.key}>{pop.text}</span>}
           <div className="row between small muted">
             <span>{deck?.emoji} {deck?.name}{q.topic && ` · ${q.topic}`}</span>
@@ -643,16 +672,16 @@ export function Player() {
             </span>
           </div>
           <div className="qbig"><Rich text={q.question} /></div>
-          {multi && run.mode !== "flash" && <div className="pill warn">Câu này có {q.answers.length} đáp án đúng — chọn đủ rồi bấm Kiểm tra</div>}
+          {multi && !(run.mode === "flash" && flipped) && <div className="pill warn">Câu này có {q.answers.length} đáp án đúng — chọn đủ rồi bấm Kiểm tra</div>}
           {q.image && <img className="qimg" src={q.image} alt="" />}
 
           <div className="choices">
             {order.map((orig, disp) => {
               const sel = mine.includes(disp);
               const ok = cd.includes(disp);
-              const cls = showAnswer ? (ok ? " right" : sel ? " wrong" : " dim") : sel ? " sel" : "";
+              const cls = (showAnswer ? (ok ? " right" : sel ? " wrong" : " dim") : sel ? " sel" : "") + (cursor === disp && !showAnswer ? " kbd-focus" : "");
               return (
-                <button key={disp} className={"choice" + cls} onClick={(e) => { e.stopPropagation(); if (run.mode !== "flash") choose(disp); }} disabled={run.mode === "flash"}>
+                <button key={disp} className={"choice" + cls} onClick={(e) => { e.stopPropagation(); choose(disp); }} disabled={run.mode === "flash" && flipped}>
                   <span className="key">{letter(disp)}</span>
                   <Rich className="grow" text={q.options[orig]} />
                   {showAnswer && ok && <span className="mark">✓</span>}
@@ -668,14 +697,16 @@ export function Player() {
             {!auto && <button className="btn sm ghost" onClick={() => setEditing({ ...q })} title="Sửa nội dung/đáp án câu này">✎ Sửa câu</button>}
           </div>
 
-          {run.mode === "flash" && !flipped && <div className="flip-hint">👆 Nhấn vào thẻ để xem đáp án</div>}
+          {run.mode === "flash" && !flipped && <div className="flip-hint">👆 Chọn đáp án bạn nghĩ là đúng — đúng hay sai đều hiện lời giải</div>}
 
           {showAnswer && !(auto && isCorrect(idx)) && (
             <div className={"feedback" + (instant ? (isCorrect(idx) ? " ok" : " no") : "")}>
               {instant && <b className="fb-title">{isCorrect(idx) ? "🎉 Chính xác!" : `❌ Chưa đúng — đáp án đúng là ${cd.map(letter).join(", ")}`}</b>}
               {confs[idx] === 2 && !isCorrect(idx) && <div className="callout bad small">⚠️ Bạn <b>chắc chắn</b> nhưng lại sai — đây là một <b>hiểu lầm</b>. Đọc kỹ giải thích; câu này sẽ được ưu tiên ôn lại.</div>}
               {confs[idx] === 0 && isCorrect(idx) && <div className="callout warn small">🎲 Đoán trúng! Hãy đọc giải thích để thật sự hiểu — câu này sẽ được nhắc ôn sớm.</div>}
-              {run.mode === "flash" && <b className="fb-title">Đáp án: {cd.map(letter).join(", ")}</b>}
+              {run.mode === "flash" && (mine.length
+                ? <b className="fb-title">{isCorrect(idx) ? "🎉 Chính xác!" : `❌ Chưa đúng — đáp án đúng là ${cd.map(letter).join(", ")}`}</b>
+                : <b className="fb-title">Đáp án: {cd.map(letter).join(", ")}</b>)}
               {!auto && q.explanation && <p><Rich text={q.explanation} /></p>}
               {!auto && q.source && <div className="muted small">Nguồn: {q.source}</div>}
               {p && run.mode === "practice" && <div className="muted small">📅 Sẽ nhắc ôn lại sau {formatInterval(p.interval)}</div>}
@@ -699,7 +730,9 @@ export function Player() {
                 </div>
               </>
             ) : (
-              <button className="btn primary big" onClick={() => setFlipped(true)}>Lật thẻ xem đáp án</button>
+              multi && mine.length
+                ? <button className="btn primary big" onClick={() => setFlipped(true)}>Kiểm tra</button>
+                : <button className="btn ghost" onClick={() => setFlipped(true)}>Không biết — xem đáp án</button>
             )
           ) : instant ? (
             <>

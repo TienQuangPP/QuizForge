@@ -268,6 +268,8 @@ details summary { cursor: pointer; font-weight: 600; font-size: 0.875rem; }
 .choice:disabled { cursor: default; }
 .choice .key { width: 30px; height: 30px; border-radius: 8px; background: var(--panel2); display: grid; place-items: center; font-weight: 700; flex-shrink: 0; font-size: 0.875rem; }
 .choice.sel { border-color: var(--brand); background: var(--brand-soft); }
+.choice.kbd-focus { border-color: var(--brand); outline: 3px solid var(--brand); outline-offset: 2px; }
+.choice.kbd-focus .key { background: var(--brand-soft); color: var(--brand); }
 .choice.sel .key { background: var(--brand); color: #fff; }
 .choice.right { border-color: var(--good); background: var(--good-soft); }
 .choice.right .key { background: var(--good); color: #fff; }

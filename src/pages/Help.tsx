@@ -17,11 +17,12 @@ const FAQ: [string, string][] = [
 
 const KEYS: [string, string][] = [
   ["1 2 3 4  hoặc  A B C D", "Chọn đáp án"],
-  ["Enter", "Kiểm tra / sang câu tiếp"],
-  ["← →", "Câu trước / câu sau"],
+  ["← →  (hoặc < >, ↑ ↓)", "Di chuyển giữa các đáp án; sau khi đã chấm thì sang câu trước / câu sau"],
+  ["Enter / Space", "Chọn đáp án đang sáng; bấm lần nữa để kiểm tra / sang câu tiếp"],
+  ["Page Up / Page Down", "Câu trước / câu sau (dùng trong chế độ thi)"],
   ["R", "Đọc to câu hỏi"],
   ["F", "Đánh dấu câu để ôn lại"],
-  ["Space", "Lật thẻ ghi nhớ"],
+  ["Space (thẻ ghi nhớ)", "Xem đáp án khi không biết; sau khi lật: chấm theo đúng/sai"],
 ];
 
 export default function Help() {
