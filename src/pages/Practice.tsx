@@ -4,7 +4,7 @@ import type { Difficulty, DraftQuestion, PracticeMode, Progress, Question } from
 import { aiReady, explainQuestion } from "../ai";
 import { letter } from "../parsers";
 import { Rich, DiffBadge, Empty, fmtDuration, go, Markdown, Modal, QuestionForm, shuffle, Spinner } from "../ui";
-import { formatInterval, grade } from "../srs";
+import { formatInterval } from "../srs";
 import { canSpeak, confetti, sound, speak, stopSpeaking } from "../fx";
 import { dayKey } from "./Dashboard";
 import { NoteModal } from "./TheoryTab";
@@ -60,7 +60,7 @@ export const discardSavedRun = () => localStorage.removeItem(RUN_KEY);
 export const MODE_INFO: Record<PracticeMode, { icon: string; title: string; desc: string }> = {
   practice: { icon: "🎯", title: "Luyện tập", desc: "Biết đúng/sai ngay, có giải thích" },
   exam: { icon: "📝", title: "Thi thử", desc: "Làm hết rồi mới chấm điểm" },
-  flash: { icon: "🃏", title: "Thẻ ghi nhớ", desc: "Chọn đáp án, xem lời giải, tự chấm mức nhớ" },
+  flash: { icon: "🃏", title: "Thẻ ghi nhớ", desc: "Chọn đáp án, xem lời giải rồi sang câu" },
   speed: { icon: "⚡", title: "Đua tốc độ", desc: "Đúng càng nhiều càng tốt trong 60 giây" },
   survival: { icon: "❤️", title: "Sinh tồn", desc: "3 mạng — sai 3 lần là thua" },
 };
@@ -554,6 +554,11 @@ export function Player() {
     setXp((x) => x + (quality > 0 ? 5 : 1));
     next();
   };
+  /** Flashcards grade themselves from the picked answer: right = "Nhớ", wrong or skipped = "Quên". */
+  const flashNext = () => (flashRes[idx] != null ? next() : rateFlash(answers[idx]?.length && isCorrect(idx) ? 2 : 0));
+  const flashPrev = () => { if (idx > 0) setIdx(idx - 1); };
+  // A card already graded (reached by going back) stays flipped.
+  useEffect(() => { if (run?.mode === "flash") setFlipped(flashRes[idx] != null); }, [idx]); // eslint-disable-line
 
   const submitExam = () => {
     const left = items.length - Object.values(answers).filter((a) => a.length).length;
@@ -570,11 +575,11 @@ export function Player() {
       if (k === "r") return readQuestion(cur!.q, cur!.order);
       if (k === "f") return void store.toggleFlag(item.id);
       if (run.mode === "flash" && flipped) {
-        // Enter/Space rates by the picked answer: right = "Nhớ", wrong = "Quên".
-        if (k === " " || k === "enter") { e.preventDefault(); rateFlash(answers[idx]?.length && !isCorrect(idx) ? 0 : 2); }
-        else if (["1", "2", "3", "4"].includes(k)) rateFlash(+k - 1);
+        if ([" ", "enter", "arrowright", ">", ".", "pagedown"].includes(k)) { e.preventDefault(); flashNext(); }
+        else if (["arrowleft", "<", ",", "pageup"].includes(k)) { e.preventDefault(); flashPrev(); }
         return;
       }
+      if (run.mode === "flash" && k === "pageup") { e.preventDefault(); flashPrev(); return; }
       const n = /^[1-9]$/.test(k) ? +k - 1 : /^[a-h]$/.test(k) && k !== "f" && k !== "r" ? k.charCodeAt(0) - 97 : -1;
       const len = cur!.order.length;
       const locked = instant && checked[idx];
@@ -719,20 +724,16 @@ export function Player() {
           {run.mode === "flash" ? (
             flipped ? (
               <>
-                <div className="muted small center" style={{ width: "100%" }}>Bạn nhớ câu này đến đâu?</div>
-                <div className="rate">
-                  {([["😵 Quên", 0, "bad"], ["😓 Khó", 1, "warn"], ["🙂 Nhớ", 2, "good"], ["😎 Dễ", 3, "accent"]] as const).map(([label, quality, tone]) => (
-                    <button key={label} className={"btn " + tone} onClick={() => rateFlash(quality)}>
-                      {label}
-                      <small>ôn lại sau {formatInterval(grade(p, q.id, quality > 0, quality).interval)}</small>
-                    </button>
-                  ))}
-                </div>
+                <button className="btn ghost" disabled={idx === 0} onClick={flashPrev}>← Câu trước</button>
+                <button className="btn primary big" onClick={flashNext}>{idx === items.length - 1 ? "Xem kết quả 🏁" : "Câu tiếp theo →"}</button>
               </>
             ) : (
-              multi && mine.length
-                ? <button className="btn primary big" onClick={() => setFlipped(true)}>Kiểm tra</button>
-                : <button className="btn ghost" onClick={() => setFlipped(true)}>Không biết — xem đáp án</button>
+              <>
+                <button className="btn ghost" disabled={idx === 0} onClick={flashPrev}>← Câu trước</button>
+                {multi && mine.length
+                  ? <button className="btn primary big" onClick={() => setFlipped(true)}>Kiểm tra</button>
+                  : <button className="btn ghost" onClick={() => setFlipped(true)}>Không biết — xem đáp án</button>}
+              </>
             )
           ) : instant ? (
             <>

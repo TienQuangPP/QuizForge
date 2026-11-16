@@ -22,7 +22,7 @@ const KEYS: [string, string][] = [
   ["Page Up / Page Down", "Câu trước / câu sau (dùng trong chế độ thi)"],
   ["R", "Đọc to câu hỏi"],
   ["F", "Đánh dấu câu để ôn lại"],
-  ["Space (thẻ ghi nhớ)", "Xem đáp án khi không biết; sau khi lật: chấm theo đúng/sai"],
+  ["Space (thẻ ghi nhớ)", "Xem đáp án khi không biết; sau khi lật: sang câu tiếp (← → cũng chuyển câu)"],
 ];
 
 export default function Help() {
