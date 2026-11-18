@@ -279,6 +279,12 @@ details summary { cursor: pointer; font-weight: 600; font-size: 0.875rem; }
 .flip-hint { text-align: center; color: var(--muted); font-size: 0.875rem; padding: 8px; border: 1px dashed var(--line); border-radius: 10px; }
 .feedback { border-radius: 14px; padding: 14px 16px; background: var(--panel2); display: flex; flex-direction: column; gap: 6px; animation: rise 0.2s; }
 .feedback p { white-space: pre-wrap; }
+.q-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (min-width: 1000px) {
+  .player-body.wide { max-width: 1440px; }
+  .qcard.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .qcard.split .q-side { position: sticky; top: 16px; max-height: calc(100vh - 150px); overflow-y: auto; }
+}
 .feedback.ok { background: var(--good-soft); }
 .feedback.no { background: var(--bad-soft); }
 .feedback.ok > b { color: var(--good); }

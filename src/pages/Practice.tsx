@@ -65,7 +65,7 @@ export const MODE_INFO: Record<PracticeMode, { icon: string; title: string; desc
   survival: { icon: "❤️", title: "Sinh tồn", desc: "3 mạng — sai 3 lần là thua" },
 };
 
-const SAFE_ORDER = /all of the above|none of the above|tất cả các|cả [abcd] và|không có (đáp án|phương án)|both a and b/i;
+const SAFE_ORDER = /all of the above|none of the above|both of the above|all answers are correct|tất cả các|cả [abcd] và|cả hai (đáp án|phương án) trên|không có (đáp án|phương án)|both a and b/i;
 export const makeItems = (list: Question[], shuffleOpts: boolean): RunItem[] =>
   list.map((q) => ({ id: q.id, order: shuffleOpts && !SAFE_ORDER.test(q.options.join(" ")) ? shuffle(q.options.map((_, i) => i)) : q.options.map((_, i) => i) }));
 
@@ -638,6 +638,8 @@ export function Player() {
   const correctSoFar = Object.keys(checked).filter((i) => isCorrect(+i)).length;
   const isChecked = instant && checked[idx];
   const showAnswer = isChecked || (run.mode === "flash" && flipped);
+  // On wide screens the explanation sits beside the question instead of below it.
+  const showFeedback = showAnswer && !(auto && isCorrect(idx));
   const mine = answers[idx] ?? [];
   const multi = q.answers.length > 1;
 
@@ -665,10 +667,11 @@ export function Player() {
       </div>
       <div className="bar thin"><span style={{ width: `${run.mode === "speed" && run.timeLimitSec ? (elapsed / run.timeLimitSec) * 100 : (answeredCount / items.length) * 100}%` }} /></div>
 
-      <div className="player-body">
+      <div className={"player-body" + (showFeedback ? " wide" : "")}>
         {combo >= 3 && instant && <div className="combo" key={combo}>🔥 Combo x{combo}</div>}
-        <div className={"qcard" + (run.mode === "flash" ? " flash" + (flipped ? " flipped" : "") : "")}>
+        <div className={"qcard" + (run.mode === "flash" ? " flash" + (flipped ? " flipped" : "") : "") + (showFeedback ? " split" : "")}>
           {pop && <span className="xp-pop" key={pop.key}>{pop.text}</span>}
+          <div className="q-main">
           <div className="row between small muted">
             <span>{deck?.emoji} {deck?.name}{q.topic && ` · ${q.topic}`}</span>
             <span className="row gap">
@@ -703,9 +706,10 @@ export function Player() {
           </div>
 
           {run.mode === "flash" && !flipped && <div className="flip-hint">👆 Chọn đáp án bạn nghĩ là đúng — đúng hay sai đều hiện lời giải</div>}
+          </div>
 
-          {showAnswer && !(auto && isCorrect(idx)) && (
-            <div className={"feedback" + (instant ? (isCorrect(idx) ? " ok" : " no") : "")}>
+          {showFeedback && (
+            <div className={"feedback q-side" + (instant ? (isCorrect(idx) ? " ok" : " no") : "")}>
               {instant && <b className="fb-title">{isCorrect(idx) ? "🎉 Chính xác!" : `❌ Chưa đúng — đáp án đúng là ${cd.map(letter).join(", ")}`}</b>}
               {confs[idx] === 2 && !isCorrect(idx) && <div className="callout bad small">⚠️ Bạn <b>chắc chắn</b> nhưng lại sai — đây là một <b>hiểu lầm</b>. Đọc kỹ giải thích; câu này sẽ được ưu tiên ôn lại.</div>}
               {confs[idx] === 0 && isCorrect(idx) && <div className="callout warn small">🎲 Đoán trúng! Hãy đọc giải thích để thật sự hiểu — câu này sẽ được nhắc ôn sớm.</div>}
